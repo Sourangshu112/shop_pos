@@ -1,1 +1,1 @@
-UPDATE inventory SET barcode = 126 WHERE id = 8;
+INSERT INTO inventory VALUES (5,'123435','I1',200,200);

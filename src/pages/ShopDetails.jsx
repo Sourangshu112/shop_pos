@@ -11,6 +11,14 @@ export default function ShopDetails({shopDetails, setShopDetails}){
               />
             </div>
             <div className="mb-4">
+              <label className="block text-gray-700 text-sm font-bold mb-2">Phone No.</label>
+              <input 
+                value={shopDetails.phone} 
+                onChange={(e) => setShopDetails({...shopDetails, phone: e.target.value})}
+                className="shadow appearance-none border rounded w-full h-10 py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" 
+              />
+            </div>
+            <div className="mb-4">
               <label className="block text-gray-700 text-sm font-bold mb-2">GST No.</label>
               <input 
                 value={shopDetails.gst} 

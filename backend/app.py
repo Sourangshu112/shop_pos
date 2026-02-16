@@ -14,7 +14,7 @@ def init_db():
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS inventory (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            barcode TEXT,
+            barcode TEXT UNIQUE,
             name TEXT,
             price REAL,
             stock INTEGER
@@ -115,6 +115,40 @@ def checkout():
         # 5. If ANY error happens, UNDO everything
         conn.rollback()
         return jsonify({"error": str(e)}), 500
+    finally:
+        conn.close()
+    
+@app.route('/api/add-items-bulk', methods=['POST'])
+def add_items_bulk():
+    data = request.json.get('items') # We expect a list called "items"
+    
+    if not data:
+        return jsonify({"error": "No data provided"}), 400
+    
+
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+
+    try:
+        query = """
+        INSERT INTO inventory (barcode, name, price, stock) 
+        VALUES (?, ?, ?, ?)
+        ON CONFLICT(barcode) 
+        DO UPDATE SET stock = inventory.stock + excluded.stock
+        """
+        params = [(i['barcode'], i['name'], i['price'], i['stock']) for i in data]
+        cursor.executemany(query, params)
+        conn.commit()
+        return jsonify({"message": "Batch upload successful"}), 200
+
+    except sqlite3.IntegrityError:
+        conn.rollback()
+        return jsonify({"error": "One or more barcodes already exist in database"}), 400
+        
+    except Exception as e:
+        conn.rollback()
+        return jsonify({"error": str(e)}), 500
+        
     finally:
         conn.close()
 

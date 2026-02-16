@@ -1,10 +1,12 @@
-import { useState } from 'react';
+import { useState,useRef } from 'react';
 import toast from 'react-hot-toast';
 import PaymentModal from '../components/PaymentModal';
+import Receipt from '../components/Receipt';
 
-export default function Checkout({cart, setCart}) {
+export default function Checkout({cart, setCart, shopDetails}) {
   const [search, setSearch] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const componentRef = useRef();
 
   const totalAmount = cart.reduce((sum, item) => sum + item.total, 0);
   const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
@@ -183,7 +185,7 @@ export default function Checkout({cart, setCart}) {
                   <div>
                     <span className="text-lg font-bold text-gray-700 uppercase">Grand Total: </span>
                     <span className="text-2xl font-bold text-blue-700">
-                      ₹{totalAmount}
+                      ₹{totalAmount.toFixed(2)}
                     </span>
                   </div>
                   <button className="w-50 bg-blue-500 py-4 rounded-lg font-bold text-xl hover:bg-blue-600" onClick={handleCheckoutClick}>
@@ -194,9 +196,17 @@ export default function Checkout({cart, setCart}) {
 </div>
 
         {/* Bill Section */}
-        <div className="sm:w-1/3 md:w-1/4 bg-gray-800 text-white p-6 rounded-lg shadow-xl flex flex-col justify-center items-center">
-          <h3 className="text-gray-400 text-xl uppercase">Total Amount</h3>
-          <h1 className="text-5xl font-bold mt-2">₹{totalAmount.toFixed(2)}</h1>
+        <div className="sm:w-1/3 md:w-1/4 bg-gray-800 border-4 border-black rounded-md overflow-auto">
+          <div id="printable-receipt">
+            <Receipt 
+                ref={componentRef} 
+                cart={cart} 
+                total={totalAmount}
+                shopDetails={shopDetails}
+                orderId={Date.now().toString().slice(-6)} // Simple ID
+                date={new Date().toLocaleDateString()}
+            />
+        </div>
         </div>
       </div>
     </div>

@@ -11,9 +11,10 @@ import Navbar from './components/Navbar';
 function App() {
   const [activeTab, setActiveTab] = useState('checkout');
   const [cart, setCart] = useState([]);
+  const [itemsList, setItemsList] = useState([]);
   const [shopDetails, setShopDetails] = useState(() => {
     const saved = localStorage.getItem("pos_shop");
-    return saved ? JSON.parse(saved) : { name: "", address: "", gst: "" };
+    return saved ? JSON.parse(saved) : { name: "", address: "", gst: "", phone: "" };
   });
 
   useEffect(() => {
@@ -29,8 +30,8 @@ function App() {
       {/* Main Content Area */}
       <main className="flex-1 overflow-hidden">
         {activeTab === 'shopDetails' && <ShopDetails shopDetails={shopDetails} setShopDetails={setShopDetails} />}
-        {activeTab === 'checkout' && <Checkout cart={cart} setCart={setCart} />}
-        {activeTab === 'add_item' && <AddItem />}
+        {activeTab === 'checkout' && <Checkout cart={cart} setCart={setCart} shopDetails={shopDetails} />}
+        {activeTab === 'add_item' && <AddItem itemsList={itemsList} setItemsList={setItemsList}  />}
         {activeTab === 'inventory' && <Inventory />}
         {activeTab === 'analytics' && <Analytics />}
       </main>
