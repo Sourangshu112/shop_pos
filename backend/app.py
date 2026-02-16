@@ -74,6 +74,49 @@ def search_item():
         return jsonify(dict(item))
     else:
         return jsonify({"error": "Item not found"}), 404
+    
+# backend/app.py
+
+@app.route('/api/checkout', methods=['POST'])
+def checkout():
+    cart = request.json.get('cart') # Expecting a list of items
+    if not cart:
+        return jsonify({"error": "Cart is empty"}), 400
+
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+
+    try:
+        for item in cart:
+            barcode = item['barcode']
+            quantity_sold = item['quantity']
+
+            cursor.execute("SELECT stock, name FROM inventory WHERE barcode=?", (barcode,))
+            row = cursor.fetchone()
+            
+            if not row:
+                raise Exception(f"Item {barcode} not found")
+            
+            current_stock = row[0]
+            item_name = row[1]
+
+            if current_stock < quantity_sold:
+                raise Exception(f"Not enough stock for {item_name}. Only {current_stock} left.")
+
+            # 3. Update the stock
+            new_stock = current_stock - quantity_sold
+            cursor.execute("UPDATE inventory SET stock=? WHERE barcode=?", (new_stock, barcode))
+
+        # 4. If we get here, everything is good. SAVE CHANGES.
+        conn.commit()
+        return jsonify({"message": "Sale successful!", "status": "success"}), 200
+
+    except Exception as e:
+        # 5. If ANY error happens, UNDO everything
+        conn.rollback()
+        return jsonify({"error": str(e)}), 500
+    finally:
+        conn.close()
 
 if __name__ == "__main__":
     app.run(host='127.0.0.1', port=5000, debug=True)

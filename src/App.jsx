@@ -1,45 +1,38 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { Toaster } from 'react-hot-toast';
+
 import AddItem from './pages/AddItems';
 import Checkout from './pages/Checkout';
 import Inventory from './pages/Inventory';
+import Analytics from './pages/Analytics';
+import ShopDetails from './pages/ShopDetails';
+import Navbar from './components/Navbar';
 
 function App() {
   const [activeTab, setActiveTab] = useState('checkout');
+  const [cart, setCart] = useState([]);
+  const [shopDetails, setShopDetails] = useState(() => {
+    const saved = localStorage.getItem("pos_shop");
+    return saved ? JSON.parse(saved) : { name: "", address: "", gst: "" };
+  });
+
+  useEffect(() => {
+    localStorage.setItem("pos_shop", JSON.stringify(shopDetails));
+  }, [shopDetails]);
 
   return (
     <div className="h-screen flex flex-col bg-gray-100 text-gray-900 font-sans">
-      
+      <Toaster position="top-center" toastOptions={{ duration: 3000 }} />
       {/* Navigation Bar (Tabs) */}
-      <nav className="bg-white shadow-md p-4 flex gap-4">
-        <h1 className="text-xl font-bold mr-8 text-blue-600 self-center">Soura POS</h1>
-        
-        <button 
-          onClick={() => setActiveTab('checkout')}
-          className={`px-4 py-2 rounded-md font-medium ${activeTab === 'checkout' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-50'}`}
-        >
-          Checkout
-        </button>
-        
-        <button 
-          onClick={() => setActiveTab('add_item')}
-          className={`px-4 py-2 rounded-md font-medium ${activeTab === 'add_item' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-50'}`}
-        >
-          Add Item
-        </button>
-        
-        <button 
-          onClick={() => setActiveTab('inventory')}
-          className={`px-4 py-2 rounded-md font-medium ${activeTab === 'inventory' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-50'}`}
-        >
-          Inventory
-        </button>
-      </nav>
+      <Navbar activeTab={activeTab} setActiveTab={setActiveTab} />
 
       {/* Main Content Area */}
       <main className="flex-1 overflow-hidden">
-        {activeTab === 'checkout' && <Checkout />}
+        {activeTab === 'shopDetails' && <ShopDetails shopDetails={shopDetails} setShopDetails={setShopDetails} />}
+        {activeTab === 'checkout' && <Checkout cart={cart} setCart={setCart} />}
         {activeTab === 'add_item' && <AddItem />}
         {activeTab === 'inventory' && <Inventory />}
+        {activeTab === 'analytics' && <Analytics />}
       </main>
       
     </div>

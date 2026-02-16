@@ -1,0 +1,1 @@
+UPDATE inventory SET barcode = 126 WHERE id = 8;
