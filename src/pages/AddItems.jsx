@@ -26,11 +26,12 @@ export default function AddItem({itemsList, setItemsList}) {
 
   // --- NEW: BARCODE SCAN LOGIC ---
   const handleBarcodeKeyDown = (e) => {
-    if (e.key === 'Enter') {
+    if (e.key === 'Enter' || e.key === "Tab") {
       e.preventDefault(); // Stop form submission if any
       
       const scannedBarcode = form.barcode.trim();
-      if (!scannedBarcode) return;
+      if (!scannedBarcode)
+        return;
 
       if (itemsList.find(i => i.barcode === scannedBarcode)){
         toast.error("Item already in list... Make change in List");
@@ -42,22 +43,23 @@ export default function AddItem({itemsList, setItemsList}) {
       const foundItem = items.find(i => i.barcode === scannedBarcode);
 
       if (foundItem) {
-        // FOUND: Auto-fill and Lock
         setForm({
           ...form,
           name: foundItem.name,
           price: foundItem.price,
           lock: true,
-          stock: '' // Keep stock empty for entry
+          stock: ''
         });
-        setIsLocked(true); // Disable inputs
+        setIsLocked(true);
         toast.success("Item found! Enter stock quantity.");
-        stockInputRef.current.focus(); // Jump straight to Stock
+        stockInputRef.current.focus();
       } else {
-        // NOT FOUND: Unlock and let user type
         setIsLocked(false);
+        setForm({...form, name: '', price: '', stock: '', lock: false })
         toast("New Item. Please enter details.", { icon: '🆕' });
-        nameInputRef.current.focus(); // Jump to Name
+        setTimeout(() => {
+        nameInputRef.current?.focus();
+        }, 0);
       }
     }
   };
@@ -69,6 +71,11 @@ export default function AddItem({itemsList, setItemsList}) {
   };
 
   const handleChange = (e) => {
+    if (e.target.name === "barcode") {
+      setIsLocked(false);
+      setForm({barcode: e.target.value, name: '', price: '', stock: '', lock: false });
+      return;
+    }
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
@@ -93,9 +100,8 @@ export default function AddItem({itemsList, setItemsList}) {
     setItemsList([...itemsList, newItem]);
     
     // RESET EVERYTHING FOR NEXT ITEM
-    setForm({ barcode: '', name: '', price: '', stock: '' });
+    setForm({ barcode: '', name: '', price: '', stock: '', lock: false });
     setIsLocked(false); // <--- Unlock for next scan
-    
     barcodeInputRef.current.focus(); // Go back to start
   };
 
@@ -161,7 +167,8 @@ const saveAllToDatabase = async () => {
             ref={nameInputRef} // Attach Ref
             name="name" 
             placeholder="Product Name" 
-            value={form.name} 
+            value={form.name}
+            onFocus={handleBarcodeKeyDown}
             onChange={handleChange}
             disabled={isLocked} // <--- DISABLED IF FOUND
             className={`w-full mt-1 p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${isLocked ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-gray-50'}`} 
@@ -202,10 +209,6 @@ const saveAllToDatabase = async () => {
           ADD
         </button>
       </div>
-
-      {/* ... Rest of your Table and Save Button code ... */}
-      
-      {/* Copy the rest of your JSX exactly as it was */}
       <div className="flex-1 bg-white shadow-inner border rounded-lg flex flex-col overflow-hidden mb-4">
         {/* ... table code ... */}
          <div className="flex-1 overflow-y-auto">

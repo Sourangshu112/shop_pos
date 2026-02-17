@@ -11,6 +11,7 @@ export const Receipt = React.forwardRef(({ cart, total, shopDetails, orderId, da
         <h1 className="text-xl font-bold uppercase">{shopDetails.name}</h1>
         <p className="text-xs">{shopDetails.address}</p>
         <p className="text-xs">Phone No.: {shopDetails.phone}</p>
+        {shopDetails.gst ? <p className="text-xs">GST No.: {shopDetails.gst}</p> : <></>}
         <div className="my-2 border-b border-black border-dashed"></div>
       </div>
 

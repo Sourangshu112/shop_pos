@@ -1,3 +1,5 @@
+import { Info, ShoppingCart, PlusCircle, Package, BarChart3 } from 'lucide-react';
+
 export default function Navbar({activeTab, setActiveTab}) {
     return(
         <nav className="bg-white shadow-md p-4 flex gap-4">
@@ -5,35 +7,40 @@ export default function Navbar({activeTab, setActiveTab}) {
         
         <button 
           onClick={() => setActiveTab('shopDetails')}
-          className={`px-4 py-2 rounded-md font-medium ${activeTab === 'shopDetails' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-50'}`}
+          className={`px-4 py-2 rounded-md font-medium flex gap-2 ${activeTab === 'shopDetails' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-50'}`}
         >
+          <Info size={24} />
           Details
         </button>
 
         <button 
           onClick={() => setActiveTab('checkout')}
-          className={`px-4 py-2 rounded-md font-medium ${activeTab === 'checkout' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-50'}`}
+          className={`px-4 py-2 rounded-md font-medium flex gap-2 ${activeTab === 'checkout' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-50'}`}
         >
+          <ShoppingCart size={24} />
           Checkout
         </button>
         
         <button 
           onClick={() => setActiveTab('add_item')}
-          className={`px-4 py-2 rounded-md font-medium ${activeTab === 'add_item' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-50'}`}
+          className={`px-4 py-2 rounded-md font-medium flex gap-2 ${activeTab === 'add_item' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-50'}`}
         >
+          <PlusCircle size={24} />
           Add Item
         </button>
         
         <button 
           onClick={() => setActiveTab('inventory')}
-          className={`px-4 py-2 rounded-md font-medium ${activeTab === 'inventory' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-50'}`}
+          className={`px-4 py-2 rounded-md font-medium flex gap-2 ${activeTab === 'inventory' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-50'}`}
         >
+          <Package size={24} />
           Inventory
         </button>
         <button 
           onClick={() => setActiveTab('analytics')}
-          className={`px-4 py-2 rounded-md font-medium ${activeTab === 'analytics' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-50'}`}
+          className={`px-4 py-2 rounded-md font-medium flex gap-2 ${activeTab === 'analytics' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-50'}`}
         >
+          <BarChart3 size={24} />
           Analytics
         </button>
       </nav>

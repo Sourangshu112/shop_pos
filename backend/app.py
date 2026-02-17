@@ -1,6 +1,7 @@
 import sqlite3
 from flask import Flask, jsonify, request
 from flask_cors import CORS
+from datetime import datetime
 
 app = Flask(__name__)
 CORS(app)
@@ -20,8 +21,21 @@ def init_db():
             stock INTEGER
         )
     """)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS sales (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            barcode TEXT,
+            name TEXT,
+            quantity INTEGER,
+            total_price REAL,
+            date TEXT  -- Stored as YYYY-MM-DD
+        )
+    """)
+
     conn.commit()
     conn.close()
+
 
 # Initialize DB on start
 init_db()
@@ -87,6 +101,7 @@ def checkout():
     cursor = conn.cursor()
 
     try:
+        today = datetime.now().strftime("%Y-%m-%d")
         for item in cart:
             barcode = item['barcode']
             quantity_sold = item['quantity']
@@ -103,16 +118,19 @@ def checkout():
             if current_stock < quantity_sold:
                 raise Exception(f"Not enough stock for {item_name}. Only {current_stock} left.")
 
-            # 3. Update the stock
             new_stock = current_stock - quantity_sold
             cursor.execute("UPDATE inventory SET stock=? WHERE barcode=?", (new_stock, barcode))
 
-        # 4. If we get here, everything is good. SAVE CHANGES.
+            cursor.execute("""
+                INSERT INTO sales (barcode, name, quantity, total_price, date) VALUES (?, ?, ?, ?, ?)""", 
+                (barcode, item_name, quantity_sold, item['price'] * quantity_sold, today))
+
         conn.commit()
         return jsonify({"message": "Sale successful!", "status": "success"}), 200
+    
+    
 
     except Exception as e:
-        # 5. If ANY error happens, UNDO everything
         conn.rollback()
         return jsonify({"error": str(e)}), 500
     finally:
@@ -151,6 +169,56 @@ def add_items_bulk():
         
     finally:
         conn.close()
+    
+@app.route('/api/analytics', methods=['GET'])
+def get_analytics():
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    
+    # Query: Sum of quantity per item (Grouped by Name)
+    # You can filter by date here if you want (e.g., WHERE date LIKE '2023-10%')
+    cursor.execute("""
+        SELECT name, SUM(quantity) as total_sold 
+        FROM sales 
+        GROUP BY name 
+        ORDER BY total_sold DESC 
+        LIMIT 10
+    """)
+    rows = cursor.fetchall()
+    conn.close()
+    
+    # Format for Recharts: [{name: 'Maggi', sales: 50}, ...]
+    data = [{"name": row[0], "sales": row[1]} for row in rows]
+    return jsonify(data)
+
+@app.route('/api/analytics/advanced', methods=['GET'])
+def get_advanced_analytics():
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    
+    # 1. DAILY TREND (Last 7 days)
+    # Group sales by date and sum the total_price
+    cursor.execute("""
+        SELECT date, SUM(total_price) as daily_revenue 
+        FROM sales 
+        GROUP BY date 
+        ORDER BY date DESC 
+        LIMIT 7
+    """)
+    trend_data = [{"date": row[0], "revenue": row[1]} for row in cursor.fetchall()]
+    # Reverse so it flows left-to-right (Oldest -> Newest)
+    trend_data.reverse() 
+
+    # 2. LOW STOCK ITEMS
+    cursor.execute("SELECT name, stock FROM inventory WHERE stock < 10 ORDER BY stock ASC LIMIT 5")
+    low_stock_data = [{"name": row[0], "stock": row[1]} for row in cursor.fetchall()]
+
+    conn.close()
+    
+    return jsonify({
+        "trend": trend_data,
+        "low_stock": low_stock_data
+    })
 
 if __name__ == "__main__":
     app.run(host='127.0.0.1', port=5000, debug=True)

@@ -7,7 +7,7 @@ export default function ShopDetails({shopDetails, setShopDetails}){
               <input 
                 value={shopDetails.name} 
                 onChange={(e) => setShopDetails({...shopDetails, name: e.target.value})}
-                className="shadow appearance-none border rounded w-full h-10 py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" 
+                className="shadow appearance-none border rounded w-full h-10 py-2 px-3 leading-tight focus:outline-none focus:shadow-outline" 
               />
             </div>
             <div className="mb-4">
@@ -15,7 +15,7 @@ export default function ShopDetails({shopDetails, setShopDetails}){
               <input 
                 value={shopDetails.phone} 
                 onChange={(e) => setShopDetails({...shopDetails, phone: e.target.value})}
-                className="shadow appearance-none border rounded w-full h-10 py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" 
+                className="shadow appearance-none border rounded w-full h-10 py-2 px-3 leading-tight focus:outline-none focus:shadow-outline" 
               />
             </div>
             <div className="mb-4">
@@ -23,7 +23,7 @@ export default function ShopDetails({shopDetails, setShopDetails}){
               <input 
                 value={shopDetails.gst} 
                 onChange={(e) => setShopDetails({...shopDetails, gst: e.target.value})}
-                className="shadow appearance-none border rounded w-full h-10 py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" 
+                className="shadow appearance-none border rounded w-full h-10 py-2 px-3  leading-tight focus:outline-none focus:shadow-outline" 
               />
             </div>
             <div className="mb-4">
@@ -31,7 +31,7 @@ export default function ShopDetails({shopDetails, setShopDetails}){
               <textarea 
                 value={shopDetails.address} 
                 onChange={(e) => setShopDetails({...shopDetails, address: e.target.value})}
-                className="shadow appearance-none border rounded w-full h-30 py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" 
+                className="shadow appearance-none border rounded w-full h-30 py-2 px-3 leading-tight focus:outline-none focus:shadow-outline" 
               />
             </div>
         </div>
