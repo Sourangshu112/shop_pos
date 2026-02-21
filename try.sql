@@ -1,1 +1,2 @@
-INSERT INTO inventory VALUES (5,'123435','I1',200,200);
+DELETE FROM sales WHERE invoice_id = "INV-20260220-143027";
+DELETE FROM transactions WHERE invoice_id = "INV-20260220-143027";

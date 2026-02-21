@@ -1,13 +1,20 @@
-export default function PaymentModal({ isOpen, onClose, onConfirm, total, itemsCount }) {
+export default function ConfirmModal({ isOpen, onClose, onConfirm, total, itemsCount }) {
   if (!isOpen) return null;
 
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter'){
+      e.preventDefault();
+      onConfirm()
+    }
+  }
+
   return (
-    <div className="fixed inset-0 bg-black/50 bg-opacity-50 flex justify-center items-center z-50 backdrop-blur-sm">
+    <div className="fixed inset-0 bg-black/50 bg-opacity-50 flex justify-center items-center z-50 backdrop-blur-sm" tabIndex="0" onKeyDown={handleKeyDown}>
       <div className="bg-white rounded-lg shadow-2xl w-96 p-6 transform transition-all scale-100">
         
         {/* Header */}
         <div className="text-center mb-6">
-          <h2 className="text-2xl font-bold text-gray-800">Confirm Payment?</h2>
+          <h2 className="text-2xl font-bold text-gray-800">Confirm ?</h2>
           <p className="text-gray-600 mt-2 text-xl font-bold">Total Items: {itemsCount}</p>
         </div>
 
@@ -29,10 +36,11 @@ export default function PaymentModal({ isOpen, onClose, onConfirm, total, itemsC
           </button>
           
           <button 
+            autoFocus
             onClick={onConfirm}
             className="flex-1 px-4 py-3 bg-green-600 text-white font-bold rounded-lg hover:bg-green-700 shadow-lg hover:shadow-green-500/30 transition"
           >
-            Confirm & Print
+            Press Enter
           </button>
         </div>
 

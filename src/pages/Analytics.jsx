@@ -1,38 +1,112 @@
 import { useEffect, useState } from 'react';
-import { 
-  BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend 
-} from 'recharts';
+import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { format, eachDayOfInterval, isSameDay, parseISO } from 'date-fns';
+import { getFirstDay,getLastDay } from '../utils/DateTime';
+import toast from 'react-hot-toast';
 
 export default function Analytics() {
   const [salesData, setSalesData] = useState([]);
   const [trendData, setTrendData] = useState([]);
-  const [lowStock, setLowStock] = useState([]);
+  const [startDate, setStartDate] = useState(getFirstDay());
+  const [endDate, setEndDate] = useState(getLastDay());
+  
 
-  useEffect(() => {
-    // Fetch Top Items
-    fetch('http://127.0.0.1:5000/api/analytics')
-      .then(res => res.json())
-      .then(data => setSalesData(data));
+  const fetchData = async() => {
+      try {
+        const res1 = await fetch(`http://127.0.0.1:5000/api/analytics/sales-per-item?startDate=${startDate}&endDate=${endDate}`);
+        if (res1.ok){
+          const data = await res1.json()
+          setSalesData(data);
+        }
+        else throw new Error("Failed in Loading")
 
-    // Fetch Advanced Metrics
-    fetch('http://127.0.0.1:5000/api/analytics/advanced')
-      .then(res => res.json())
-      .then(data => {
-        setTrendData(data.trend);
-        setLowStock(data.low_stock);
-      });
+        const res2 = await fetch(`http://127.0.0.1:5000/api/analytics/revenue-per-day?startDate=${startDate}&endDate=${endDate}`);
+        if(res2.ok){
+          const data = await res2.json();
+          setTrendData(processChartData(data.trend,startDate, endDate));
+        }
+         else throw new Error("Failed in Loading")
+      }
+      catch (error) {
+        toast.error("Failed try again")
+        console.error("Could not fetch sales data:", error);
+      }
+    }
+
+  useEffect( () => {
+    fetchData()
   }, []);
+
+  const processChartData = (data, startDate, endDate) => {
+  // 1. Create an array of all dates in the range
+  const allDates = eachDayOfInterval({
+    start: parseISO(startDate),
+    end: parseISO(endDate)
+  });
+
+  return allDates.map(date => {
+    // Check if this specific date exists in your backend data
+    const found = data.find(d => isSameDay(parseISO(d.date), date));
+    
+    return {
+      date: format(date, 'yyyy-MM-dd'), // Format x-axis label
+      revenue: found ? found.revenue : null // Use existing revenue or default to 0
+    };
+  });
+};
 
   return (
     <div className="p-8 h-full bg-gray-50 overflow-y-auto">
-      <h2 className="text-3xl font-bold text-gray-800 mb-8">Dashboard</h2>
-
+      <div className='flex justify-between items-center mb-6 gap-4'>
+        <h2 className="text-3xl font-bold text-gray-800 mb-8">Dashboard</h2>
+        <div className='flex px-2 gap-4'>
+          <div className='flex flex-col px-2 gap-1'>
+            <label className="text-sm font-semibold text-gray-600 ml-1">Starting Date</label>
+              <input 
+                type="date" 
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="px-3 py-2 border rounded-lg shadow-sm focus:ring-2 focus:ring-blue-400 outline-none"
+              />
+            </div>
+            <div className='flex flex-col px-2 gap-1'>
+            <label className="text-sm font-semibold text-gray-600 ml-1">End Date</label>
+            <input 
+              type="date" 
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              className="px-3 py-2 border rounded-lg shadow-sm focus:ring-2 focus:ring-blue-400 outline-none"
+            />
+            </div>
+          <button 
+              onClick={fetchData} 
+              className="text-md font-bold text-blue-900 border border-blue-900 bg-blue-200 px-6 py-3 rounded-2xl"
+            >
+              Fetch Data
+            </button>
+        </div>
+      </div>
       {/* TOP ROW: Trend Chart & Low Stock */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-        
-        {/* 1. REVENUE TREND (Line Chart) takes up 2/3rds */}
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 col-span-2">
-          <h3 className="text-lg font-semibold text-gray-600 mb-4">Weekly Revenue Trend</h3>
+      {/* BOTTOM ROW: The original Bar Chart */}
+      <div className="mb-8">
+      <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 h-80">
+        <h3 className="text-lg font-semibold text-gray-600 mb-4">Top Selling Items</h3>
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={salesData}>
+             {/* ... your existing BarChart code ... */}
+             <CartesianGrid strokeDasharray="3 3" vertical={false} />
+             <XAxis dataKey="name" />
+             <YAxis />
+             <Tooltip />
+             <Bar dataKey="sales" fill="#3B82F6" radius={[4, 4, 0, 0]} barSize={30} />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+      </div>
+
+      {/* 1. REVENUE TREND (Line Chart) takes up 2/3rds */}
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+          <h3 className="text-lg font-semibold text-gray-600 mb-4">Monthly Revenue Trend</h3>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={trendData}>
@@ -52,43 +126,6 @@ export default function Analytics() {
             </ResponsiveContainer>
           </div>
         </div>
-
-        {/* 2. LOW STOCK ALERT (List) takes up 1/3rd */}
-        <div className=" p-6 rounded-xl shadow-sm border border-red-100 bg-red-50">
-          <h3 className="text-lg font-bold text-red-700 mb-4 flex items-center">
-            ⚠️ Low Stock Alerts
-          </h3>
-          {lowStock.length === 0 ? (
-            <p className="text-green-600 font-medium">All stocked up! ✅</p>
-          ) : (
-            <div className="space-y-3">
-              {lowStock.map((item, idx) => (
-                <div key={idx} className="flex justify-between items-center bg-white p-3 rounded shadow-sm border border-red-100">
-                  <span className="font-medium text-gray-700 truncate w-32">{item.name}</span>
-                  <span className="bg-red-100 text-red-800 text-xs font-bold px-2 py-1 rounded-full">
-                    {item.stock} left
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* BOTTOM ROW: The original Bar Chart */}
-      <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 h-80">
-        <h3 className="text-lg font-semibold text-gray-600 mb-4">Top Selling Items</h3>
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={salesData}>
-             {/* ... your existing BarChart code ... */}
-             <CartesianGrid strokeDasharray="3 3" vertical={false} />
-             <XAxis dataKey="name" />
-             <YAxis />
-             <Tooltip />
-             <Bar dataKey="sales" fill="#3B82F6" radius={[4, 4, 0, 0]} />
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
     </div>
   );
 }

@@ -1,12 +1,16 @@
-import { useState,useRef } from 'react';
+import { useState } from 'react';
 import toast from 'react-hot-toast';
-import PaymentModal from '../components/PaymentModal';
+import ConfirmModal from '../components/ConfirmModal';
 import Receipt from '../components/Receipt';
+import { pdf } from '@react-pdf/renderer';
+import { ReceiptPDF } from '../components/ReceiptPDF';
+import { Trash2 } from 'lucide-react';
+import { generateInvoiceId, today } from '../utils/DateTime';
 
 export default function Checkout({cart, setCart, shopDetails}) {
   const [search, setSearch] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const componentRef = useRef();
+  const [currentInvoiceId, setCurrentInvoiceId] = useState(generateInvoiceId());
 
   const totalAmount = cart.reduce((sum, item) => sum + item.total, 0);
   const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
@@ -17,8 +21,14 @@ export default function Checkout({cart, setCart, shopDetails}) {
       toast.error("Cart is empty!");
       return;
     }
+    if (totalItems === 0) {
+      toast.error("No items");
+      return;
+    }
     setIsModalOpen(true); // <--- Open the non-blocking modal
   };
+
+  const removeItem = barcode => setCart(cart.filter(item => item.barcode !== barcode))
 
   // 2. The Real Transaction (Called by Modal)
   const processTransaction = async () => {
@@ -26,10 +36,28 @@ export default function Checkout({cart, setCart, shopDetails}) {
     const loadingToast = toast.loading("Processing Transaction...");
 
     try {
-      const res = await fetch('http://127.0.0.1:5000/api/checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cart: cart })
+      if (!currentInvoiceId) setCurrentInvoiceId(generateInvoiceId());
+      const blob = await pdf(      
+        <ReceiptPDF 
+          items={totalItems}
+          cart={cart}
+          total={totalAmount}
+          shopDetails={shopDetails}
+          orderId={currentInvoiceId}
+          date={today()}
+          />  
+        ).toBlob();
+
+        const formData = new FormData();
+        formData.append('cart', JSON.stringify(cart));
+        formData.append('invoice_pdf', blob, 'invoice.pdf');
+        formData.append('invoice_id', currentInvoiceId);
+        formData.append("total_amount",totalAmount);
+        formData.append("total_items",totalItems);
+
+      const res = await fetch('http://127.0.0.1:5000/api/checkout-with-pdf', {
+      method: 'POST',
+      body: formData // No Content-Type header needed (browser handles it)
       });
 
       const data = await res.json();
@@ -38,16 +66,15 @@ export default function Checkout({cart, setCart, shopDetails}) {
         toast.dismiss(loadingToast);
         toast.success("Transaction Complete! ✅");
         
-        setCart([]); // Clear cart
-        localStorage.removeItem("pos_cart");
-        
-        // TRIGGER PRINTING HERE LATER
+        setCart([]);
+        setCurrentInvoiceId(generateInvoiceId());
       } else {
         toast.dismiss(loadingToast);
         toast.error(`Error: ${data.error}`);
       }
     } catch (error) {
       toast.dismiss(loadingToast);
+      console.log(error);
       toast.error("Server connection failed");
     }
   };
@@ -98,7 +125,6 @@ export default function Checkout({cart, setCart, shopDetails}) {
     
     if (res.ok) {
       const item = await res.json();
-      console.log(item);
       if (checkStock(item,1)) {
         setCart([...cart, {...item,quantity: 1, total: item.price}]);
         setSearch(''); // Clear search box
@@ -113,7 +139,7 @@ export default function Checkout({cart, setCart, shopDetails}) {
   return (
     
     <div className="p-8 flex flex-col h-full">
-      <PaymentModal 
+      <ConfirmModal 
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onConfirm={processTransaction}
@@ -150,11 +176,13 @@ export default function Checkout({cart, setCart, shopDetails}) {
                 <table className="min-w-full leading-normal">
                   <thead className="bg-gray-100 sticky top-0 shadow-sm">
                     <tr>
-                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Sl. No.</th>
-                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Name</th>
-                      <th className="px-4 py-3 text-center text-xs font-bold text-gray-600 uppercase tracking-wider">Quantity</th>
-                      <th className="px-4 py-3 text-right text-xs font-bold text-gray-600 uppercase tracking-wider">Price</th>
-                      <th className="px-4 py-3 text-right text-xs font-bold text-gray-600 uppercase tracking-wider">Total</th>
+                      <th className="w-[5%] px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase">Sl. No.</th>
+                      <th className="w-[50%] px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase">Name</th>
+                      <th className="w-[20%] px-4 py-3 text-center text-xs font-bold text-gray-600 uppercase ">Quantity</th>
+                      <th className="w-[10%] px-4 py-3 text-right text-xs font-bold text-gray-600 uppercase">Price</th>
+                      <th className="w-[10%] px-4 py-3 text-right text-xs font-bold text-gray-600 uppercase">Total</th>
+                      <th className="w-[5%] px-4 py-3 text-right text-xs font-bold text-gray-600 uppercasr"></th>
+
                     </tr>
                   </thead>
                   <tbody>
@@ -172,6 +200,11 @@ export default function Checkout({cart, setCart, shopDetails}) {
                           </td>
                           <td className="px-4 py-3 text-sm text-right text-gray-700">₹{item.price.toFixed(2)}</td>
                           <td className="px-4 py-3 text-sm text-right font-bold text-gray-900">₹{item.total.toFixed(2)}</td>
+                          <td className="px-4 py-3 text-sm text-right font-bold text-gray-900"> 
+                            <button onClick={() => removeItem(item.barcode)} className="text-red-500 text-sm hover:text-red-700 font-bold px-3 py-1 rounded-full hover:bg-red-100 transition">
+                              <Trash2 size={24} color='red' />
+                            </button>
+                          </td>
                         </tr>
                       ))
                     )}
@@ -196,17 +229,18 @@ export default function Checkout({cart, setCart, shopDetails}) {
 </div>
 
         {/* Bill Section */}
-        <div className="sm:w-1/3 md:w-1/4 bg-gray-800 border-4 border-black rounded-md overflow-auto">
-          <div id="printable-receipt">
+        <div className="w-72 bg-black border-4 border-black rounded-md overflow-auto">
+          <div id="receipt" className='h-full flex flex-col'>
             <Receipt 
-                ref={componentRef} 
-                cart={cart} 
+                items={totalItems}
+                cart={cart}
                 total={totalAmount}
                 shopDetails={shopDetails}
-                orderId={Date.now().toString().slice(-6)} // Simple ID
-                date={new Date().toLocaleDateString()}
+                orderId={currentInvoiceId}
+                date={today()}
             />
-        </div>
+            
+          </div>
         </div>
       </div>
     </div>

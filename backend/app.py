@@ -2,6 +2,10 @@ import sqlite3
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 from datetime import datetime
+import os
+import json
+from werkzeug.utils import secure_filename
+import subprocess
 
 app = Flask(__name__)
 CORS(app)
@@ -25,16 +29,30 @@ def init_db():
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS sales (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
+            invoice_id TEXT,
             barcode TEXT,
             name TEXT,
             quantity INTEGER,
             total_price REAL,
-            date TEXT  -- Stored as YYYY-MM-DD
+            date TEXT
+        )
+    """)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS transactions (
+            invoice_id TEXT PRIMARY KEY,
+            date TEXT,
+            total_amount REAL,
+            items_count INTEGER,
+            pdf_path TEXT
         )
     """)
 
     conn.commit()
     conn.close()
+
+    if not os.path.exists("invoices"):
+        os.makedirs("invoices")
 
 
 # Initialize DB on start
@@ -90,51 +108,6 @@ def search_item():
         return jsonify({"error": "Item not found"}), 404
     
 # backend/app.py
-
-@app.route('/api/checkout', methods=['POST'])
-def checkout():
-    cart = request.json.get('cart') # Expecting a list of items
-    if not cart:
-        return jsonify({"error": "Cart is empty"}), 400
-
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
-
-    try:
-        today = datetime.now().strftime("%Y-%m-%d")
-        for item in cart:
-            barcode = item['barcode']
-            quantity_sold = item['quantity']
-
-            cursor.execute("SELECT stock, name FROM inventory WHERE barcode=?", (barcode,))
-            row = cursor.fetchone()
-            
-            if not row:
-                raise Exception(f"Item {barcode} not found")
-            
-            current_stock = row[0]
-            item_name = row[1]
-
-            if current_stock < quantity_sold:
-                raise Exception(f"Not enough stock for {item_name}. Only {current_stock} left.")
-
-            new_stock = current_stock - quantity_sold
-            cursor.execute("UPDATE inventory SET stock=? WHERE barcode=?", (new_stock, barcode))
-
-            cursor.execute("""
-                INSERT INTO sales (barcode, name, quantity, total_price, date) VALUES (?, ?, ?, ?, ?)""", 
-                (barcode, item_name, quantity_sold, item['price'] * quantity_sold, today))
-
-        conn.commit()
-        return jsonify({"message": "Sale successful!", "status": "success"}), 200
-    
-    
-
-    except Exception as e:
-        conn.rollback()
-        return jsonify({"error": str(e)}), 500
-    finally:
-        conn.close()
     
 @app.route('/api/add-items-bulk', methods=['POST'])
 def add_items_bulk():
@@ -170,20 +143,28 @@ def add_items_bulk():
     finally:
         conn.close()
     
-@app.route('/api/analytics', methods=['GET'])
-def get_analytics():
+@app.route('/api/analytics/sales-per-item', methods=['GET'])
+def get_sales_per_item_analytics():
+    start_date = request.args.get('startDate')
+    end_date = request.args.get('endDate')
+
+    if not start_date or not end_date:
+        return jsonify({
+            "error": "Missing parameters", 
+            "message": "Both startDate and endDate are required"
+        }), 400
+    
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     
-    # Query: Sum of quantity per item (Grouped by Name)
-    # You can filter by date here if you want (e.g., WHERE date LIKE '2023-10%')
     cursor.execute("""
         SELECT name, SUM(quantity) as total_sold 
         FROM sales 
+        WHERE date BETWEEN ? AND ?
         GROUP BY name 
         ORDER BY total_sold DESC 
         LIMIT 10
-    """)
+    """, (start_date, end_date))
     rows = cursor.fetchall()
     conn.close()
     
@@ -191,33 +172,178 @@ def get_analytics():
     data = [{"name": row[0], "sales": row[1]} for row in rows]
     return jsonify(data)
 
-@app.route('/api/analytics/advanced', methods=['GET'])
-def get_advanced_analytics():
+@app.route('/api/analytics/revenue-per-day', methods=['GET'])
+def get_revenue_per_day_analytics():
+    start_date = request.args.get('startDate')
+    end_date = request.args.get('endDate')
+
+    if not start_date or not end_date:
+        return jsonify({
+            "error": "Missing parameters", 
+            "message": "Both startDate and endDate are required"
+        }), 400
+    
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     
-    # 1. DAILY TREND (Last 7 days)
-    # Group sales by date and sum the total_price
     cursor.execute("""
         SELECT date, SUM(total_price) as daily_revenue 
-        FROM sales 
+        FROM sales
+        WHERE date BETWEEN ? AND ? 
         GROUP BY date 
         ORDER BY date DESC 
-        LIMIT 7
-    """)
+    """, (start_date, end_date))
+
     trend_data = [{"date": row[0], "revenue": row[1]} for row in cursor.fetchall()]
     # Reverse so it flows left-to-right (Oldest -> Newest)
     trend_data.reverse() 
 
-    # 2. LOW STOCK ITEMS
-    cursor.execute("SELECT name, stock FROM inventory WHERE stock < 10 ORDER BY stock ASC LIMIT 5")
-    low_stock_data = [{"name": row[0], "stock": row[1]} for row in cursor.fetchall()]
-
     conn.close()
     
     return jsonify({
-        "trend": trend_data,
-        "low_stock": low_stock_data
+        "trend": trend_data
+    })
+
+@app.route('/api/checkout-with-pdf', methods=['POST'])
+def checkout_with_pdf():
+    # 1. GET DATA FROM FORM
+    try:
+        cart_data = request.form.get('cart')
+        pdf_file = request.files.get('invoice_pdf')
+        invoice_id = request.form.get('invoice_id')
+        grand_total = request.form.get('total_amount')
+        total_items = request.form.get('total_items')
+
+        if not cart_data or not pdf_file:
+            return jsonify({"error": "Missing cart or PDF file"}), 400
+
+        cart = json.loads(cart_data) # Convert string back to JSON list
+    except Exception as e:
+        return jsonify({"error": f"Bad data: {str(e)}"}), 400
+
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    
+    try:
+        # Generate Invoice ID        
+        today = datetime.now().strftime("%Y-%m-%d")
+
+        # ... (Keep your Stock Update & Sales Logic exactly the same) ...
+        try:
+            for item in cart:
+                barcode = item['barcode']
+                quantity_sold = item['quantity']
+    
+                cursor.execute("SELECT stock, name FROM inventory WHERE barcode=?", (barcode,))
+                row = cursor.fetchone()
+                
+                if not row:
+                    raise Exception(f"Item {barcode} not found")
+                
+                current_stock = row[0]
+                item_name = row[1]
+    
+                if current_stock < quantity_sold:
+                    raise Exception(f"Not enough stock for {item_name}. Only {current_stock} left.")
+    
+                new_stock = current_stock - quantity_sold
+                cursor.execute("UPDATE inventory SET stock=? WHERE barcode=?", (new_stock, barcode))
+    
+                cursor.execute("""
+                    INSERT INTO sales (invoice_id, barcode, name, quantity, total_price, date) VALUES (?, ?, ?, ?, ?, ?)""", 
+                    (invoice_id, barcode, item_name, quantity_sold, item['price'] * quantity_sold, today))
+    
+        except Exception as e:
+            conn.rollback()
+            return jsonify({"error": str(e)}), 500
+
+
+        # 2. SAVE THE PDF FILE
+        filename = f"{invoice_id}.pdf"
+        save_path = os.path.join("invoices", filename)
+        pdf_file.save(save_path) # <--- SAVING THE FILE FROM REACT
+
+        # 3. SAVE TRANSACTION RECORD
+        cursor.execute("""
+            INSERT INTO transactions (invoice_id, date, total_amount, items_count, pdf_path)
+            VALUES (?, ?, ?, ?, ?)
+        """, (invoice_id, today, grand_total, total_items, save_path))
+
+        conn.commit()
+        return jsonify({"message": "Success", "invoice_id": invoice_id}), 200
+
+    except Exception as e:
+        conn.rollback()
+        return jsonify({"error": str(e)}), 500
+    finally:
+        conn.close()
+
+@app.route('/api/history', methods=['GET'])
+def get_history():
+    conn = sqlite3.connect(DB_NAME)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM transactions ORDER BY date DESC")
+    rows = cursor.fetchall()
+    conn.close()
+    return jsonify([dict(row) for row in rows])
+
+@app.route('/api/history-search', methods=['GET'])
+def search_history():
+    id = request.args.get("id")
+    if not id:
+        return jsonify({
+            "error": "Missing parameters", 
+            "message": "Both startDate and endDate are required"
+        }), 400
+    
+    conn = sqlite3.connect(DB_NAME)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM transactions WHERE invoice_id = ?",(id,))
+    row = cursor.fetchone()
+    conn.close()
+    return jsonify([dict(row)])
+
+@app.route('/api/history-date', methods=['GET'])
+def date_history():
+    date = request.args.get("date")
+    if not date:
+        return get_history()
+    conn = sqlite3.connect(DB_NAME)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM transactions WHERE date = ? ORDER BY date DESC",(date,))
+    rows = cursor.fetchall()
+    conn.close()
+    return jsonify([dict(row) for row in rows])
+
+
+# 5. OPEN PDF ENDPOINT (Uses system default viewer)
+@app.route('/api/open-invoice/<path:invoice_id>', methods=['GET'])
+def open_invoice(invoice_id):
+    # This relies on Windows 'start' command or Mac 'open'
+    path = os.path.abspath(f"invoices/{invoice_id}.pdf")
+    if os.path.exists(path):
+        if os.name == 'nt': # Windows
+            os.startfile(path)
+        else: # Mac/Linux
+            subprocess.call(('open', path))
+        return jsonify({"message": "Opened"}), 200
+    return jsonify({"error": "File not found"}), 404
+
+@app.route('/api/open-items/<item_id>', methods=['GET'])
+def get_item(item_id):
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM sales WHERE invoice_id = ?",(item_id,))
+    data_raw = cursor.fetchall()
+    data = [{"name" : i[3], "quantity": i[4], "total": i[5]} for i in data_raw]
+    # Flask automatically passes 'item_id' as an argument
+    return jsonify({
+        "invoice_id": item_id,
+        "date" : data_raw[0][-1],
+        "data" : data,
     })
 
 if __name__ == "__main__":

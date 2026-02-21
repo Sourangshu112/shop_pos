@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'; // Import useRef
 import toast from 'react-hot-toast';
+import { Trash2 } from 'lucide-react';
 
 export default function AddItem({itemsList, setItemsList}) {
   const [form, setForm] = useState({ barcode: '', name: '', price: '', stock: '', lock: false });
@@ -13,11 +14,19 @@ export default function AddItem({itemsList, setItemsList}) {
   const stockInputRef = useRef(null);
   const barcodeInputRef = useRef(null);
 
-  const fetchData = () => {
-    fetch('http://127.0.0.1:5000/api/inventory')
-      .then(res => res.json())
-      .then(data => setItems(data))
-      .catch(err => console.error(err));
+  const fetchData = async () => {
+    try {
+      const res = await fetch('http://127.0.0.1:5000/api/inventory');
+
+      if (!res.ok) {
+        throw new Error(`Server responded with ${res.status}`);
+      }
+
+      const data = await res.json();
+      setItems(data);
+    } catch (err) {
+      console.error("Failed to fetch inventory:", err);
+    }
   };
 
   useEffect(() => {
@@ -105,10 +114,9 @@ export default function AddItem({itemsList, setItemsList}) {
     barcodeInputRef.current.focus(); // Go back to start
   };
 
-  // ... (removeItem and saveAllToDatabase stay the same) ...
-  const removeItem = (id) => setItemsList(itemsList.filter(item => item.tempId !== id));
+  const removeItem = id => setItemsList(itemsList.filter(item => item.tempId !== id));
 
-const saveAllToDatabase = async () => {
+  const saveAllToDatabase = async () => {
     if (itemsList.length === 0) {
       toast.error("List is empty!");
       return;
@@ -253,7 +261,9 @@ const saveAllToDatabase = async () => {
                       <input type="number" className="w-20 p-2 border border-gray-300 rounded-lg text-center focus:ring-2 focus:ring-blue-500 outline-none" value={item.stock} onChange={(e) => updateItem(item.tempId, 'stock', parseInt(e.target.value) || 0)}/>
                     </td>
                     <td className="px-5 py-2 text-center">
-                      <button onClick={() => removeItem(item.tempId)} className="text-red-500 text-sm hover:text-red-700 font-bold px-3 py-1 rounded hover:bg-red-100 transition">DELETE</button>
+                      <button onClick={() => removeItem(item.tempId)} className="text-red-500 text-sm hover:text-red-700 font-bold px-3 py-1 rounded-full hover:bg-red-100 transition">
+                        <Trash2 size={24} color='red' />
+                      </button>
                     </td>
                   </tr>
                 ))

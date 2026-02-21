@@ -6,17 +6,41 @@ export default function Inventory() {
   // 1. New State for Search and Sort
   const [searchTerm, setSearchTerm] = useState("");
   const [sortConfig, setSortConfig] = useState({ key: 'name', direction: 'ascending' });
+  const [lowStock, setLowStock] = useState([]);
 
-  const refreshData = () => {
-    fetch('http://127.0.0.1:5000/api/inventory')
-      .then(res => res.json())
-      .then(data => setItems(data))
-      .catch(err => console.error(err));
+
+  const refreshData = async () => {
+    try {
+      const res = await fetch('http://127.0.0.1:5000/api/inventory');
+    if (!res.ok) {
+      throw new Error(`Server responded with ${res.status}`);
+    }
+    const data = await res.json();
+    setItems(data);
+    }
+    catch (err) {
+    console.error("Failed to fetch inventory:", err);
+  }
   };
 
   useEffect(() => {
     refreshData();
   }, []);
+
+  useEffect(() => {
+  // 1. Filter the items where stock < 10
+  // 2. Map them to only return name and stock
+  const lowStockItems = items
+    .filter(item => item.stock < 10)
+    .map(item => ({
+      name: item.name,
+      stock: item.stock
+    }));
+
+  // 3. Update the state
+  setLowStock(lowStockItems);
+
+}, [items]);
 
   // 2. Sorting Handler
   const requestSort = (key) => {
@@ -62,7 +86,7 @@ export default function Inventory() {
   };
 
   return (
-    <div className="p-8 h-screen flex flex-col">
+    <div className="p-8 h-full flex flex-col">
       
       {/* Header Section with Search */}
       <div className="flex justify-between items-center mb-6 gap-4">
@@ -81,8 +105,8 @@ export default function Inventory() {
           Refresh
         </button>
       </div>
-
-      <div className="bg-white shadow rounded-lg overflow-hidden grow overflow-y-auto">
+      <div className='flex flex-row gap-5'>
+      <div className="bg-white shadow rounded-lg overflow-hidden grow overflow-y-auto overflow-x-auto w-3/4">
         <table className="min-w-full leading-normal">
           <thead>
             <tr className="bg-gray-100 text-gray-600 uppercase text-sm leading-normal sticky top-0">
@@ -143,6 +167,29 @@ export default function Inventory() {
           </tbody>
         </table>
       </div>
+      {console.log(items)}
+      {/* 2. LOW STOCK ALERT (List) takes up 1/3rd */}
+        <div className="p-6 rounded-xl shadow-sm border border-red-200 bg-red-100 w-1/4">
+          <h3 className="text-lg font-bold text-red-700 mb-4 flex items-center">
+            ⚠️ Low Stock Alerts
+          </h3>
+          {lowStock.length === 0 ? (
+            <p className="text-green-600 font-medium">All stocked up! ✅</p>
+          ) : (
+            <div className="space-y-3">
+              {lowStock.map((item, idx) => (
+                <div key={idx} className="flex justify-between items-center bg-white p-3 rounded shadow-sm border border-red-100">
+                  <span className="font-medium text-gray-700 truncate w-32">{item.name}</span>
+                  <span className="bg-red-100 text-red-800 text-xs font-bold px-2 py-1 rounded-full">
+                    {item.stock} left
+                    {console.log(lowStock)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+    </div>
     </div>
   );
 }

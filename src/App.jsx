@@ -6,6 +6,7 @@ import Checkout from './pages/Checkout';
 import Inventory from './pages/Inventory';
 import Analytics from './pages/Analytics';
 import ShopDetails from './pages/ShopDetails';
+import History from './pages/History';
 import Navbar from './components/Navbar';
 
 function App() {
@@ -34,6 +35,7 @@ function App() {
         {activeTab === 'add_item' && <AddItem itemsList={itemsList} setItemsList={setItemsList}  />}
         {activeTab === 'inventory' && <Inventory />}
         {activeTab === 'analytics' && <Analytics />}
+        {activeTab === 'history' && <History />}
       </main>
       
     </div>
