@@ -10,7 +10,7 @@ export default defineConfig({
   ],
   base: './',
   server: {
-    port: 3000,    // <--- FORCE PORT 3000
+    port: 4231,    // <--- FORCE PORT 3000
     strictPort: true, // Fail if port is busy
   }
 })

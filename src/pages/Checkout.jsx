@@ -155,6 +155,7 @@ export default function Checkout({cart, setCart, shopDetails}) {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && addToCart()} 
+          autoFocus
           className="flex-1 p-4 border rounded-lg text-lg shadow-sm focus:ring-2 focus:ring-blue-500 outline-none"
         />
         <button 

@@ -10,7 +10,32 @@ import subprocess
 app = Flask(__name__)
 CORS(app)
 
-DB_NAME = "pos.db"
+def get_db_path():
+    # This creates a folder in C:\Users\YourName\AppData\Roaming\SyntaxLabPOS
+    app_data_dir = os.path.join(os.environ['APPDATA'], 'SyntaxLabPOS')
+    
+    # Create the folder if it doesn't exist
+    if not os.path.exists(app_data_dir):
+        os.makedirs(app_data_dir)
+        
+    return os.path.join(app_data_dir, 'pos.db')
+
+def get_invoice_path():
+    # This creates a folder in C:\Users\YourName\AppData\Roaming\SyntaxLabPOS
+    app_data_dir = os.path.join(os.environ['APPDATA'], 'SyntaxLabPOS')
+    invoice_path = os.path.join(app_data_dir,"invoices")
+    # Create the folder if it doesn't exist
+    if not os.path.exists(app_data_dir):
+        os.makedirs(app_data_dir)
+
+    if not os.path.exists(invoice_path):
+        os.makedirs(invoice_path)
+        
+    return invoice_path
+
+DB_NAME = get_db_path()
+INVOICE_PATH = get_invoice_path()
+
 
 def init_db():
     """Initialize database if not exists (similar to your setup)"""
@@ -43,20 +68,26 @@ def init_db():
             invoice_id TEXT PRIMARY KEY,
             date TEXT,
             total_amount REAL,
-            items_count INTEGER,
-            pdf_path TEXT
+            items_count INTEGER
         )
     """)
 
     conn.commit()
     conn.close()
 
-    if not os.path.exists("invoices"):
-        os.makedirs("invoices")
-
-
 # Initialize DB on start
 init_db()
+
+def print_receipt_pdf(pdf_path):
+    # Path to the SumatraPDF executable you bundled with your app
+    sumatra_path = "SumatraPDF.exe"
+    command = [sumatra_path, '-print-to-default', '-silent', '-print-settings', 'noscale', pdf_path]
+    try:
+        # Run the command in the background
+        subprocess.run(command, check=True, creationflags=subprocess.CREATE_NO_WINDOW)
+        print("Receipt printed successfully!")
+    except subprocess.CalledProcessError as e:
+        print(f"Failed to print: {e}")
 
 # --- 1. ADD ITEM ENDPOINT ---
 @app.route('/api/add-item', methods=['POST'])
@@ -226,7 +257,6 @@ def checkout_with_pdf():
     try:
         # Generate Invoice ID        
         today = datetime.now().strftime("%Y-%m-%d")
-
         # ... (Keep your Stock Update & Sales Logic exactly the same) ...
         try:
             for item in cart:
@@ -259,16 +289,17 @@ def checkout_with_pdf():
 
         # 2. SAVE THE PDF FILE
         filename = f"{invoice_id}.pdf"
-        save_path = os.path.join("invoices", filename)
-        pdf_file.save(save_path) # <--- SAVING THE FILE FROM REACT
+        save_path = os.path.join(INVOICE_PATH, filename)
+        pdf_file.save(save_path) 
 
         # 3. SAVE TRANSACTION RECORD
         cursor.execute("""
-            INSERT INTO transactions (invoice_id, date, total_amount, items_count, pdf_path)
-            VALUES (?, ?, ?, ?, ?)
-        """, (invoice_id, today, grand_total, total_items, save_path))
+            INSERT INTO transactions (invoice_id, date, total_amount, items_count)
+            VALUES (?, ?, ?, ?)
+        """, (invoice_id, today, grand_total, total_items))
 
         conn.commit()
+        print_receipt_pdf(save_path)
         return jsonify({"message": "Success", "invoice_id": invoice_id}), 200
 
     except Exception as e:
@@ -319,15 +350,14 @@ def date_history():
 
 
 # 5. OPEN PDF ENDPOINT (Uses system default viewer)
-@app.route('/api/open-invoice/<path:invoice_id>', methods=['GET'])
+@app.route('/api/open-invoice/<invoice_id>', methods=['GET'])
 def open_invoice(invoice_id):
     # This relies on Windows 'start' command or Mac 'open'
-    path = os.path.abspath(f"invoices/{invoice_id}.pdf")
-    if os.path.exists(path):
+    path = os.path.join(INVOICE_PATH,f"{invoice_id}.pdf")
+    full_path = os.path.abspath(path)
+    if os.path.exists(full_path):
         if os.name == 'nt': # Windows
-            os.startfile(path)
-        else: # Mac/Linux
-            subprocess.call(('open', path))
+            os.startfile(full_path)
         return jsonify({"message": "Opened"}), 200
     return jsonify({"error": "File not found"}), 404
 
@@ -346,4 +376,4 @@ def get_item(item_id):
     })
 
 if __name__ == "__main__":
-    app.run(host='127.0.0.1', port=5000, debug=True)
+    app.run(host='127.0.0.1', port=5000)

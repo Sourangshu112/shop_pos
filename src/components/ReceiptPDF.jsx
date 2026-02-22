@@ -133,7 +133,7 @@ export const ReceiptPDF = ({ items, cart, total, shopDetails, orderId, date }) =
       {/* 6. FOOTER */}
       <View style={{ marginTop: 20, textAlign: 'center' }}>
         <Text>Thank you for visiting!</Text>
-        <Text style={{ fontSize: 8, marginTop: 5 }}>Powered by SouraPOS</Text>
+        <Text style={{ fontSize: 8, marginTop: 5 }}>Powered by SyntaxLabPOS</Text>
       </View>
 
     </Page>

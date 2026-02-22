@@ -57,7 +57,7 @@ const Receipt = ({items, cart, total, shopDetails, orderId, date }) => {
       <div className="text-center text-xs">
         <p>Thank you for visiting!</p>
         <p></p>
-        <p className="mt-2 text-[10px]">Powered by SouraPOS</p>
+        <p className="mt-2 text-[10px]">Powered by SyntaxLabPOS</p>
       </div>
 
     </div>

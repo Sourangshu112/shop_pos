@@ -24,7 +24,7 @@ function App() {
 
   return (
     <div className="h-screen flex flex-col bg-gray-100 text-gray-900 font-sans">
-      <Toaster position="top-center" toastOptions={{ duration: 3000 }} />
+      <Toaster position="top-right" toastOptions={{ duration: 3000 }} />
       {/* Navigation Bar (Tabs) */}
       <Navbar activeTab={activeTab} setActiveTab={setActiveTab} />
 

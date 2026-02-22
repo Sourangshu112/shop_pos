@@ -1,15 +1,38 @@
 {
   "name": "my-pos-app",
+  "productName": "SyntaxLab POS",
+  "description": "POS SOFTWARE",
+  "author": {"name" :"Sourangshu Ghosh"},
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "main": "electron/main.cjs",
   "scripts": {
     "vite:dev": "vite",
     "electron:dev": "cross-env ELECTRON_START_URL=http://localhost:3000 electron .",
     "dev": "concurrently -k \"npm run vite:dev\" \"wait-on tcp:3000 && npm run electron:dev\"",
     "vite:build": "vite build",
+    "pack:app": "electron-builder --dir",
+    "build:app": "electron-builder",
     "lint": "eslint .",
     "preview": "vite preview"
+  },
+  "build" : {
+    "appId": "com.syntaxlab.pos",
+    "win": {
+      "target": "nsis",
+      "icon": "public/icon.ico"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "backend-dist",
+        "to": "backend-dist",
+        "filter": ["**/*"]
+      }
+    ]
   },
   "dependencies": {
     "@react-pdf/renderer": "^4.3.2",
@@ -34,6 +57,7 @@
     "concurrently": "^9.2.1",
     "cross-env": "^10.1.0",
     "electron": "^40.4.1",
+    "electron-builder": "^26.8.1",
     "eslint": "^9.39.1",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",

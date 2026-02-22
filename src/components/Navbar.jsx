@@ -3,7 +3,7 @@ import { Info, ShoppingCart, PlusCircle, Package, BarChart3, History } from 'luc
 export default function Navbar({activeTab, setActiveTab}) {
     return(
         <nav className="bg-white shadow-md p-4 flex gap-4">
-        <h1 className="text-xl font-bold mr-8 text-blue-600 self-center">Soura POS</h1>
+        <h1 className="text-xl font-bold mr-8 text-blue-600 self-center">SyntaxLab POS</h1>
         
         <button 
           onClick={() => setActiveTab('shopDetails')}
