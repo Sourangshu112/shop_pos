@@ -162,8 +162,7 @@ def get_sales_per_item_analytics():
         FROM sales 
         WHERE date BETWEEN ? AND ?
         GROUP BY name 
-        ORDER BY total_sold DESC 
-        LIMIT 10
+        ORDER BY total_sold DESC
     """, (start_date, end_date))
     rows = cursor.fetchall()
     conn.close()

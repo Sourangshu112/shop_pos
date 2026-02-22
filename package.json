@@ -15,14 +15,15 @@
     "@react-pdf/renderer": "^4.3.2",
     "@tailwindcss/vite": "^4.1.18",
     "date-fns": "^4.1.0",
-    "html2canvas": "^1.4.1",
-    "jspdf": "^4.1.0",
+    "file-saver": "^2.0.5",
+    "jspdf": "^4.2.0",
     "lucide-react": "^0.574.0",
     "qrcode": "^1.5.4",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-hot-toast": "^2.6.0",
-    "recharts": "^3.7.0"
+    "recharts": "^3.7.0",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",

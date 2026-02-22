@@ -3,6 +3,8 @@ import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, R
 import { format, eachDayOfInterval, isSameDay, parseISO } from 'date-fns';
 import { getFirstDay,getLastDay } from '../utils/DateTime';
 import toast from 'react-hot-toast';
+import * as XLSX from 'xlsx';
+import { saveAs } from 'file-saver';
 
 export default function Analytics() {
   const [salesData, setSalesData] = useState([]);
@@ -36,6 +38,20 @@ export default function Analytics() {
   useEffect( () => {
     fetchData()
   }, []);
+
+  const exportToExcel = () => {
+    const worksheet1 = XLSX.utils.json_to_sheet(salesData);
+    const worksheet2 = XLSX.utils.json_to_sheet(trendData)
+
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet1, "Sales Record");
+    XLSX.utils.book_append_sheet(workbook, worksheet2, "Sales Per Day Record");
+
+    const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+
+    const dataBlob = new Blob([excelBuffer], { type: 'application/octet-stream' });
+    saveAs(dataBlob, `Data_Between_${startDate}_and_${endDate}.xlsx`);
+};
 
   const processChartData = (data, startDate, endDate) => {
   // 1. Create an array of all dates in the range
@@ -78,11 +94,17 @@ export default function Analytics() {
               className="px-3 py-2 border rounded-lg shadow-sm focus:ring-2 focus:ring-blue-400 outline-none"
             />
             </div>
-          <button 
+            <button 
               onClick={fetchData} 
-              className="text-md font-bold text-blue-900 border border-blue-900 bg-blue-200 px-6 py-3 rounded-2xl"
+              className="text-md font-bold text-blue-900 border border-blue-900  bg-blue-200  px-6 py-3 rounded-2xl hover:bg-blue-500 hover:text-blue-100"
             >
               Fetch Data
+            </button>
+            <button 
+              onClick={() => exportToExcel()}
+              className="bg-green-600 text-white text-md font-bold hover:bg-green-700 transition px-6 py-3 rounded-2xl"
+            >
+              Export to Excel
             </button>
         </div>
       </div>
@@ -92,7 +114,7 @@ export default function Analytics() {
       <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 h-80">
         <h3 className="text-lg font-semibold text-gray-600 mb-4">Top Selling Items</h3>
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={salesData}>
+          <BarChart data={salesData.slice(0, 10)}>
              {/* ... your existing BarChart code ... */}
              <CartesianGrid strokeDasharray="3 3" vertical={false} />
              <XAxis dataKey="name" />

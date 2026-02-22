@@ -46,27 +46,26 @@ export default function History() {
   };
   
   useEffect(() => {
-  // If both filters are empty, load everything
-  if (!filterDate && !searchTerm) {
-    getHistory();
-  } 
-  // If there is a date, prioritize the date search
-  else if (filterDate) {
-    getHistoryOfDate();
+  if (!searchTerm) {
+    if (filterDate) {
+      getHistoryOfDate();
+    } else {
+      getHistory();
+    }
   }
-
-}, [filterDate, searchTerm]); // Watches both; runs whenever either changes
+}, [filterDate, searchTerm]);
 
   const searchHistory = async () => {
-    setFilterDate("")
     try {
       const res = await fetch(`http://127.0.0.1:5000/api/history-search?id=${searchTerm}`);
       if (!res.ok) {
         throw new Error(`Server error: ${res.status}`);
       }
       const data = await res.json();
+      console.log(data);
       setTransactions(data);
-      toast.success("Success")
+      toast.success("Success in finding");
+      setFilterDate("")
     }
     catch (err) {
       console.error("Failed to load history:", err);
