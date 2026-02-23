@@ -112,10 +112,23 @@ export const ReceiptPDF = ({ items, cart, total, shopDetails, orderId, date }) =
       {/* 4. ITEMS LOOP */}
       {cart.map((item, i) => (
         <View key={i} style={styles.row}>
-          <Text style={styles.colItem}>{item.name}</Text>
-          <Text style={styles.colQty}>{item.quantity}</Text>
-          <Text style={styles.colPrice}>{item.price}</Text>
-          <Text style={styles.colTotal}>{(item.price * item.quantity).toFixed(2)}</Text>
+          <View style={styles.row}>
+            <Text style={styles.colItem}>{item.name}</Text>
+            <Text style={styles.colQty}>{item.quantity}</Text>
+            <Text style={styles.colPrice}>{item.price}</Text>
+            <Text style={styles.colTotal}>{(item.price * item.quantity).toFixed(2)}</Text>
+          </View>
+
+          {/* Discount Row */}
+          <View style={styles.row}>
+            {/* Empty columns to align the discount to the right */}
+            <Text style={styles.colItem}></Text>
+            <Text style={styles.colQty}></Text>
+            <Text style={styles.colPrice}></Text>
+            
+            {/* Discount amount in the total column */}
+            <Text style={styles.colTotal}>-{item.discount}</Text>
+          </View>
         </View>
       ))}
 

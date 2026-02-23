@@ -81,7 +81,14 @@ export default function Analytics() {
               <input 
                 type="date" 
                 value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
+                onChange={
+                  (e) => {
+                    setStartDate(e.target.value);
+                    if (endDate && e.target.value > endDate) {
+                      setEndDate(e.target.value); 
+                    }
+                  }
+                }
                 className="px-3 py-2 border rounded-lg shadow-sm focus:ring-2 focus:ring-blue-400 outline-none"
               />
             </div>
@@ -90,7 +97,15 @@ export default function Analytics() {
             <input 
               type="date" 
               value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
+              min={startDate}
+              onChange={(e) => {
+                          // Fallback validation in case the user types a date manually instead of using the calendar UI
+                          if (startDate && e.target.value < startDate) {
+                            alert("End date cannot be before the start date.");
+                            return; 
+                          }
+                          setEndDate(e.target.value);
+                        }}
               className="px-3 py-2 border rounded-lg shadow-sm focus:ring-2 focus:ring-blue-400 outline-none"
             />
             </div>

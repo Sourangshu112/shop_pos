@@ -1,4 +1,4 @@
-import { Info, ShoppingCart, PlusCircle, Package, BarChart3, History } from 'lucide-react';
+import { Info, ShoppingCart, PlusCircle, Package, BarChart3, History, Book } from 'lucide-react';
 
 export default function Navbar({activeTab, setActiveTab}) {
     return(
@@ -42,6 +42,14 @@ export default function Navbar({activeTab, setActiveTab}) {
         >
           <BarChart3 size={24} />
           Analytics
+        </button>
+
+        <button 
+          onClick={() => setActiveTab('purchase')}
+          className={`px-4 py-2 rounded-md font-medium flex gap-2 ${activeTab === 'purchase' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-50'}`}
+        >
+          <Book size={24} />
+          Purchase history
         </button>
 
         <button 

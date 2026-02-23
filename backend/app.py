@@ -7,104 +7,32 @@ import json
 from werkzeug.utils import secure_filename
 import subprocess
 
+
+from init_db import init_db
+from path import get_db_path,get_invoice_path
+
 app = Flask(__name__)
 CORS(app)
 
-def get_db_path():
-    # This creates a folder in C:\Users\YourName\AppData\Roaming\SyntaxLabPOS
-    app_data_dir = os.path.join(os.environ['APPDATA'], 'SyntaxLabPOS')
-    
-    # Create the folder if it doesn't exist
-    if not os.path.exists(app_data_dir):
-        os.makedirs(app_data_dir)
-        
-    return os.path.join(app_data_dir, 'pos.db')
-
-def get_invoice_path():
-    # This creates a folder in C:\Users\YourName\AppData\Roaming\SyntaxLabPOS
-    app_data_dir = os.path.join(os.environ['APPDATA'], 'SyntaxLabPOS')
-    invoice_path = os.path.join(app_data_dir,"invoices")
-    # Create the folder if it doesn't exist
-    if not os.path.exists(app_data_dir):
-        os.makedirs(app_data_dir)
-
-    if not os.path.exists(invoice_path):
-        os.makedirs(invoice_path)
-        
-    return invoice_path
 
 DB_NAME = get_db_path()
 INVOICE_PATH = get_invoice_path()
-
-
-def init_db():
-    """Initialize database if not exists (similar to your setup)"""
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS inventory (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            barcode TEXT UNIQUE,
-            name TEXT,
-            price REAL,
-            stock INTEGER
-        )
-    """)
-
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS sales (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            invoice_id TEXT,
-            barcode TEXT,
-            name TEXT,
-            quantity INTEGER,
-            total_price REAL,
-            date TEXT
-        )
-    """)
-
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS transactions (
-            invoice_id TEXT PRIMARY KEY,
-            date TEXT,
-            total_amount REAL,
-            items_count INTEGER
-        )
-    """)
-
-    conn.commit()
-    conn.close()
+print_enabled = True
 
 # Initialize DB on start
 init_db()
 
 def print_receipt_pdf(pdf_path):
-    # Path to the SumatraPDF executable you bundled with your app
+    if not print_enabled:
+        return
+    
     sumatra_path = "SumatraPDF.exe"
-    command = [sumatra_path, '-print-to-default', '-silent', '-print-settings', 'noscale', pdf_path]
+    command = [sumatra_path, '-print-to-default', '-silent', '-print-settings', 'shrink', pdf_path]
     try:
-        # Run the command in the background
         subprocess.run(command, check=True, creationflags=subprocess.CREATE_NO_WINDOW)
-        print("Receipt printed successfully!")
     except subprocess.CalledProcessError as e:
-        print(f"Failed to print: {e}")
-
-# --- 1. ADD ITEM ENDPOINT ---
-@app.route('/api/add-item', methods=['POST'])
-def add_item():
-    data = request.json
-    try:
-        conn = sqlite3.connect(DB_NAME)
-        cursor = conn.cursor()
-        cursor.execute(
-            "INSERT INTO inventory (barcode, name, price, stock) VALUES (?, ?, ?, ?)",
-            (data['barcode'], data['name'], float(data['price']), int(data['stock']))
-        )
-        conn.commit()
-        conn.close()
-        return jsonify({"message": "Item added successfully!"}), 200
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return (f"Failed to Print {e}")
+    
 
 # --- 2. INVENTORY ENDPOINT ---
 @app.route('/api/inventory', methods=['GET'])
@@ -142,7 +70,8 @@ def search_item():
     
 @app.route('/api/add-items-bulk', methods=['POST'])
 def add_items_bulk():
-    data = request.json.get('items') # We expect a list called "items"
+    data = request.json.get('items')
+    today = datetime.now().strftime("%Y-%m-%d")
     
     if not data:
         return jsonify({"error": "No data provided"}), 400
@@ -160,6 +89,18 @@ def add_items_bulk():
         """
         params = [(i['barcode'], i['name'], i['price'], i['stock']) for i in data]
         cursor.executemany(query, params)
+
+        purchase_query = """
+        INSERT INTO purchases (barcode, name, quantity, date)
+        VALUES (?, ?, ?, ?)
+        """
+        purchase_params = [
+            (i['barcode'], i['name'], i['stock'], today) 
+            for i in data
+        ]
+
+        cursor.executemany(purchase_query, purchase_params)
+
         conn.commit()
         return jsonify({"message": "Batch upload successful"}), 200
 
@@ -217,7 +158,7 @@ def get_revenue_per_day_analytics():
     cursor = conn.cursor()
     
     cursor.execute("""
-        SELECT date, SUM(total_price) as daily_revenue 
+        SELECT date, SUM(final_price) as daily_revenue 
         FROM sales
         WHERE date BETWEEN ? AND ? 
         GROUP BY date 
@@ -277,10 +218,9 @@ def checkout_with_pdf():
     
                 new_stock = current_stock - quantity_sold
                 cursor.execute("UPDATE inventory SET stock=? WHERE barcode=?", (new_stock, barcode))
-    
                 cursor.execute("""
-                    INSERT INTO sales (invoice_id, barcode, name, quantity, total_price, date) VALUES (?, ?, ?, ?, ?, ?)""", 
-                    (invoice_id, barcode, item_name, quantity_sold, item['price'] * quantity_sold, today))
+                    INSERT INTO sales (invoice_id, barcode, name, quantity, total_price, discount, final_price, date) VALUES (?, ?, ?, ?, ?, ?, ?, ?)""", 
+                    (invoice_id, barcode, item_name, quantity_sold, item['total'],item['discount'],item['finalprice'], today))
     
         except Exception as e:
             conn.rollback()
@@ -307,6 +247,18 @@ def checkout_with_pdf():
         return jsonify({"error": str(e)}), 500
     finally:
         conn.close()
+
+@app.route('/api/toggle-print', methods=['GET'])
+def toggle_print():
+    global print_enabled
+    value = request.args.get('value')
+    if not value:
+        return jsonify({"error": "Missing 'value' parameter"}), 400
+    if value.lower() == "true":
+        print_enabled = True
+    else:
+        print_enabled = False
+    return jsonify({"success": True, "print_enabled": print_enabled}), 200
 
 @app.route('/api/history', methods=['GET'])
 def get_history():
@@ -375,5 +327,16 @@ def get_item(item_id):
         "data" : data,
     })
 
+@app.route('/api/purchase-history', methods=['GET'])
+def get_purchase_history():
+    conn = sqlite3.connect(DB_NAME)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    # Fetch all records from the purchases table, newest first
+    cursor.execute("SELECT * FROM purchases ORDER BY date DESC, id DESC")
+    rows = cursor.fetchall()
+    conn.close()
+    return jsonify([dict(row) for row in rows])
+
 if __name__ == "__main__":
-    app.run(host='127.0.0.1', port=5000)
+    app.run(host='127.0.0.1',debug=True, port=5000)

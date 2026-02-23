@@ -182,7 +182,6 @@ export default function Inventory() {
                   <span className="font-medium text-gray-700 truncate w-32">{item.name}</span>
                   <span className="bg-red-100 text-red-800 text-xs font-bold px-2 py-1 rounded-full">
                     {item.stock} left
-                    {console.log(lowStock)}
                   </span>
                 </div>
               ))}

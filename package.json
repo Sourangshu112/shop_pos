@@ -1,6 +1,6 @@
 {
-  "name": "my-pos-app",
-  "productName": "SyntaxLab POS",
+  "name": "syntaxlab-pos-app",
+  "productName": "SyntaxLab_POS",
   "description": "POS SOFTWARE",
   "author": {"name" :"Sourangshu Ghosh"},
   "private": true,

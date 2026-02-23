@@ -11,6 +11,7 @@ app.spec
 node_modules
 invoices
 dist
+backend-dist
 dist-ssr
 build
 *.local

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState,useEffect } from 'react';
 import toast from 'react-hot-toast';
 import ConfirmModal from '../components/ConfirmModal';
 import Receipt from '../components/Receipt';
@@ -11,10 +11,61 @@ export default function Checkout({cart, setCart, shopDetails}) {
   const [search, setSearch] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentInvoiceId, setCurrentInvoiceId] = useState(generateInvoiceId());
+  const [isPrintEnabled, setIsPrintEnabled] = useState(false);
 
-  const totalAmount = cart.reduce((sum, item) => sum + item.total, 0);
+  const totalAmount = cart.reduce((sum, item) => sum + item.finalprice, 0);
   const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
+
+  const handlePrintToggleChange = async () => {
+    const newValue = !isPrintEnabled;
+    setIsPrintEnabled(newValue);
+
+    try {
+      // Call the Flask backend
+      const response = await fetch(`http://127.0.0.1:5000/api/toggle-print?value=${newValue}`);
+      
+      if (!response.ok) {
+        throw new Error('Failed to update print status on the server.');
+      }
+      
+      // const data = await response.json();
+      // console.log("Server response:", data);
+
+    } catch (error) {
+      console.error("Error toggling print:", error);
+      setIsPrintEnabled(!newValue);
+      // alert("Failed to update settings. Please try again.");
+      toast.error("Failed to update");
+    }
+  };
   
+  useEffect(() => {
+    handlePrintToggleChange()
+  },[]);
+
+
+ useEffect(() => {
+    const handleKeyDown = (event) => {
+      if (event.key === 'Enter') {
+        event.preventDefault(); 
+        if (isModalOpen) {
+          processTransaction();
+        } else if (search) {
+          addToCart();
+        } else if (cart.length > 0) {
+          handleCheckoutClick();
+        }
+      }
+    };
+
+    // Attach the event listener to the window
+    window.addEventListener('keydown', handleKeyDown);
+
+    // Cleanup: Remove the old listener before attaching the new one
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [search, cart, isModalOpen]);
 
   const handleCheckoutClick = () => {
     if (cart.length === 0) {
@@ -96,6 +147,14 @@ export default function Checkout({cart, setCart, shopDetails}) {
   ));
   };
 
+  const updateDiscount = (barcode, Discount) => {
+  setCart(cart.map((item) => 
+    (item.barcode === barcode && Discount <= item.total)
+      ? { ...item, discount:Discount, finalprice: item.total-Discount } // Create new object with updated qty
+      : {...item, discount:item.total, finalprice: 0}
+  ));
+  };
+
   const addToCart = async () => {
     if (!search) return;
 
@@ -126,7 +185,7 @@ export default function Checkout({cart, setCart, shopDetails}) {
     if (res.ok) {
       const item = await res.json();
       if (checkStock(item,1)) {
-        setCart([...cart, {...item,quantity: 1, total: item.price}]);
+        setCart([...cart, {...item,quantity: 1, total: item.price, discount: 0, finalprice: item.price}]);
         setSearch(''); // Clear search box
       } else {
         toast.error(`${item.name} is out of stock!`);
@@ -142,7 +201,6 @@ export default function Checkout({cart, setCart, shopDetails}) {
       <ConfirmModal 
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        onConfirm={processTransaction}
         total={totalAmount}
         itemsCount={totalItems}
       />
@@ -154,7 +212,6 @@ export default function Checkout({cart, setCart, shopDetails}) {
           placeholder="Enter Barcode or Name"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && addToCart()} 
           autoFocus
           className="flex-1 p-4 border rounded-lg text-lg shadow-sm focus:ring-2 focus:ring-blue-500 outline-none"
         />
@@ -178,10 +235,12 @@ export default function Checkout({cart, setCart, shopDetails}) {
                   <thead className="bg-gray-100 sticky top-0 shadow-sm">
                     <tr>
                       <th className="w-[5%] px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase">Sl. No.</th>
-                      <th className="w-[50%] px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase">Name</th>
+                      <th className="w-[30%] px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase">Name</th>
                       <th className="w-[20%] px-4 py-3 text-center text-xs font-bold text-gray-600 uppercase ">Quantity</th>
+                      <th className="w-[10%] px-4 py-3 text-right text-xs font-bold text-gray-600 uppercase">Rate</th>
                       <th className="w-[10%] px-4 py-3 text-right text-xs font-bold text-gray-600 uppercase">Price</th>
-                      <th className="w-[10%] px-4 py-3 text-right text-xs font-bold text-gray-600 uppercase">Total</th>
+                      <th className="w-[10%] px-4 py-3 text-right text-xs font-bold text-gray-600 uppercase">₹ Discount</th>
+                      <th className="w-[10%] px-4 py-3 text-right text-xs font-bold text-gray-600 uppercase">Final price</th>
                       <th className="w-[5%] px-4 py-3 text-right text-xs font-bold text-gray-600 uppercasr"></th>
 
                     </tr>
@@ -200,7 +259,12 @@ export default function Checkout({cart, setCart, shopDetails}) {
                             <input type="number" min="0" className="w-18 p-2 bg-gray-50 border border-gray-400 rounded focus:outline-none focus:ring-2 focus:ring-blue-500" value={item.quantity} onChange={(e) => updateQuantity(item.barcode, parseInt(e.target.value) || 0)}/>
                           </td>
                           <td className="px-4 py-3 text-sm text-right text-gray-700">₹{item.price.toFixed(2)}</td>
-                          <td className="px-4 py-3 text-sm text-right font-bold text-gray-900">₹{item.total.toFixed(2)}</td>
+                          <td className="px-4 py-3 text-sm text-right text-gray-700">₹{item.total.toFixed(2)}</td>
+                          <td className="w-[10%] px-4 py-3 text-right text-xs font-bold text-gray-600 uppercase">
+                            <input type="number" min="0" className="w-18 p-2 bg-gray-50 border border-gray-400 rounded focus:outline-none focus:ring-2 focus:ring-blue-500" value={item.discount} onChange={(e) => updateDiscount(item.barcode, parseInt(e.target.value) || 0)}/>
+                          </td>
+
+                          <td className="px-4 py-3 text-sm text-right font-bold text-gray-900">₹{item.finalprice.toFixed(2)}</td>
                           <td className="px-4 py-3 text-sm text-right font-bold text-gray-900"> 
                             <button onClick={() => removeItem(item.barcode)} className="text-red-500 text-sm hover:text-red-700 font-bold px-3 py-1 rounded-full hover:bg-red-100 transition">
                               <Trash2 size={24} color='red' />
@@ -231,7 +295,7 @@ export default function Checkout({cart, setCart, shopDetails}) {
 
         {/* Bill Section */}
         <div className="w-72 bg-black border-4 border-black rounded-md overflow-auto">
-          <div id="receipt" className='h-full flex flex-col'>
+          <div id="receipt" className='h-[calc(100%-2.5rem)] flex flex-col'>
             <Receipt 
                 items={totalItems}
                 cart={cart}
@@ -240,7 +304,28 @@ export default function Checkout({cart, setCart, shopDetails}) {
                 orderId={currentInvoiceId}
                 date={today()}
             />
-            
+          </div>
+          <div>
+            <label className="flex gap-2 items-center cursor-pointer text-black py-2 px-4 bg-gray-200">
+              <span>Print Recept ?</span>    
+            {/* Hidden checkbox for accessibility and state tracking */}
+            <input 
+              type="checkbox" 
+              value="Print" 
+              className="sr-only peer"
+              checked={isPrintEnabled}
+              onChange={handlePrintToggleChange}            />
+            <span>NO</span>
+            {/* Visual Toggle Switch */}
+            <div className="relative w-11 h-6 bg-gray-400 rounded-full peer 
+              peer-checked:after:translate-x-full peer-checked:after:border-white 
+              after:content-[''] after:absolute after:top-0.5 after:start-0.5 
+              after:bg-white after:border-gray-300 after:border after:rounded-full 
+              after:h-5 after:w-5 after:transition-all 
+              peer-checked:bg-blue-600"
+            ></div>
+            <span>Yes</span>
+            </label>
           </div>
         </div>
       </div>

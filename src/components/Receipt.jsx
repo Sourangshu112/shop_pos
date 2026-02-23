@@ -30,8 +30,8 @@ const Receipt = ({items, cart, total, shopDetails, orderId, date }) => {
           </tr>
         </thead>
         <tbody>
-          {cart.map((item, index) => (
-            <tr key={index} className="border-b border-black">
+          {cart.map((item, index) => (<>
+            <tr key={index} >
               <td className="w-[45%] py-1 align-top pr-5 max-w-30">{item.name}</td>
               <td className="w-[15%] py-1 align-top">{item.quantity}</td>
               <td className="w-[15%] py-1 align-top text-center">{item.price}</td>
@@ -39,6 +39,13 @@ const Receipt = ({items, cart, total, shopDetails, orderId, date }) => {
                 {(item.price * item.quantity).toFixed(2)}
               </td>
             </tr>
+            <tr>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td className="w-[25%] py-1 align-top text-center">-{item.discount}</td>
+            </tr>
+            </>
           ))}
         </tbody>
       </table>
