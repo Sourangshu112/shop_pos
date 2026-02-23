@@ -1,6 +1,5 @@
 import os
 
-
 def get_db_path():
     # This creates a folder in C:\Users\YourName\AppData\Roaming\SyntaxLabPOS
     app_data_dir = os.path.join(os.environ['APPDATA'], 'SyntaxLab_POS')
@@ -23,3 +22,6 @@ def get_invoice_path():
         os.makedirs(invoice_path)
         
     return invoice_path
+
+DB_NAME = get_db_path()
+INVOICE_PATH = get_invoice_path()
