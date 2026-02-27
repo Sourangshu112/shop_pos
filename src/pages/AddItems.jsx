@@ -33,8 +33,32 @@ export default function AddItem({itemsList, setItemsList}) {
     fetchData();
   }, []);
 
+
+  const fetchDataFromList = async (scannedCode) => {
+  if (!scannedCode) return;
+
+  try {
+    // Make the GET request, appending the code as a URL query parameter
+    const response = await fetch(`http://127.0.0.1:5000/api/get-item?code=${scannedCode}`);
+    const data = await response.json();
+
+    if (response.ok && data.success) {
+      // The item was found!
+      toast.success(`Found`);
+      return data.formatted_name; 
+      
+    } else {
+      return null;
+    }
+    
+  } catch (error) {
+    return null;
+  }
+};
+
+
   // --- NEW: BARCODE SCAN LOGIC ---
-  const handleBarcodeKeyDown = (e) => {
+  const handleBarcodeKeyDown = async (e) => {
     if (e.key === 'Enter' || e.key === "Tab") {
       e.preventDefault(); // Stop form submission if any
       
@@ -62,14 +86,24 @@ export default function AddItem({itemsList, setItemsList}) {
         setIsLocked(true);
         toast.success("Item found! Enter stock quantity.");
         stockInputRef.current.focus();
-      } else {
+        return
+      }
+      const found2 = await fetchDataFromList(scannedBarcode)
+      if(found2){
+         setIsLocked(false);
+        setForm({...form, name: found2, price: '', stock: '', lock: false })
+        toast("New Item. Please enter details.", { icon: '🆕' });
+        setTimeout(() => {
+        nameInputRef.current?.focus();
+        }, 0);
+        return 
+      }
         setIsLocked(false);
         setForm({...form, name: '', price: '', stock: '', lock: false })
         toast("New Item. Please enter details.", { icon: '🆕' });
         setTimeout(() => {
         nameInputRef.current?.focus();
         }, 0);
-      }
     }
   };
 

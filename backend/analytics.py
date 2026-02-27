@@ -26,6 +26,7 @@ def get_sales_per_item_analytics():
         WHERE date BETWEEN ? AND ?
         GROUP BY name 
         ORDER BY total_sold DESC
+        LIMIT 100
     """, (start_date, end_date))
     rows = cursor.fetchall()
     conn.close()
@@ -65,3 +66,70 @@ def get_revenue_per_day_analytics():
     return jsonify({
         "trend": trend_data
     })
+
+
+@analytics.route('/api/analytics/item-wise-sales', methods=['GET'])
+def get_sales_item_wise_analytics():
+    start_date = request.args.get('startDate')
+    end_date = request.args.get('endDate')
+
+    if not start_date or not end_date:
+        return jsonify({
+            "error": "Missing parameters", 
+            "message": "Both startDate and endDate are required"
+        }), 400
+    
+    conn = sqlite3.connect(DB_NAME)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT
+        s.name,
+        SUM(s.quantity) as total_qty,
+        SUM(s.total_price) as total_price,
+        SUM(s.discount) as total_discount,
+        SUM(s.final_price) as total_revenue
+        FROM sales s
+        WHERE s.date BETWEEN ? AND ?
+        GROUP BY s.barcode
+        ORDER BY total_revenue DESC
+    """,(start_date,end_date))
+
+    sales_data_item_wise = [dict(row) for row in cursor.fetchall()]
+    conn.close
+    return jsonify(sales_data_item_wise)
+
+
+@analytics.route('/api/analytics/date-wise-sales', methods=['GET'])
+def get_sales_date_wise_analytics():
+    start_date = request.args.get('startDate')
+    end_date = request.args.get('endDate')
+
+    if not start_date or not end_date:
+        return jsonify({
+            "error": "Missing parameters", 
+            "message": "Both startDate and endDate are required"
+        }), 400
+    
+    conn = sqlite3.connect(DB_NAME)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    cursor.execute("""
+            SELECT 
+                s.date,
+                s.name, 
+                SUM(s.quantity) as total_qty,
+                SUM(s.total_price) as total_price,
+                SUM(s.discount) as total_discount,
+                SUM(s.final_price) as total_revenue
+            FROM sales s
+            WHERE s.date BETWEEN ? AND ?
+            GROUP BY s.date, s.barcode
+            ORDER BY s.date DESC, total_revenue DESC
+    """,(start_date,end_date))
+
+    sales_data_item_wise = [dict(row) for row in cursor.fetchall()]
+    conn.close
+    return jsonify(sales_data_item_wise)

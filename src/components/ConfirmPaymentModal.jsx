@@ -1,4 +1,4 @@
-export default function ConfirmModal({ isOpen, onClose, onConfirm, total, itemsCount }) {
+export default function ConfirmPaymentModal({ isOpen, onClose, onConfirm, total, itemsCount }) {
   if (!isOpen) return null;
 
 

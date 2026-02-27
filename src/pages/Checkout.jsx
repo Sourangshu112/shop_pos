@@ -1,11 +1,11 @@
 import { useState,useEffect } from 'react';
 import toast from 'react-hot-toast';
-import ConfirmModal from '../components/ConfirmModal';
+import ConfirmPaymentModal from '../components/ConfirmPaymentModal';
 import Receipt from '../components/Receipt';
 import { pdf } from '@react-pdf/renderer';
-import { ReceiptPDF } from '../components/ReceiptPDF';
+import { ReceiptPDF  } from '../components/ReceiptPDF';
 import { Trash2 } from 'lucide-react';
-import { generateInvoiceId, today } from '../utils/DateTime';
+import { generateInvoiceId, today, formattedDate } from '../utils/DateTime';
 
 export default function Checkout({cart, setCart, shopDetails}) {
   const [search, setSearch] = useState('');
@@ -95,7 +95,7 @@ export default function Checkout({cart, setCart, shopDetails}) {
           total={totalAmount}
           shopDetails={shopDetails}
           orderId={currentInvoiceId}
-          date={today()}
+          date={formattedDate(today())}
           />  
         ).toBlob();
 
@@ -140,12 +140,17 @@ export default function Checkout({cart, setCart, shopDetails}) {
   }
 
   const updateQuantity = (barcode, newQuantity) => {
-  setCart(cart.map((item) => 
-    (item.barcode === barcode && checkStock(item,newQuantity))
-      ? { ...item, quantity: newQuantity, total: parseFloat(item.price) * (parseInt(newQuantity)) } // Create new object with updated qty
-      : item // Keep other items same
-  ));
-  };
+  setCart(cart.map((item) => {
+    if (item.barcode === barcode && checkStock(item,newQuantity)){
+      const updatedTotal = parseFloat(item.price) * parseInt(newQuantity);
+      return { ...item, 
+        quantity: newQuantity, 
+        total: updatedTotal,
+         finalprice: updatedTotal-item.discount }
+    }
+    return item
+  }))
+  }
 
   const updateDiscount = (barcode, Discount) => {
   setCart(cart.map((item) => 
@@ -160,23 +165,39 @@ export default function Checkout({cart, setCart, shopDetails}) {
 
     const existingItemOnBarcode = cart.find((i) => i.barcode === search);
     const existingItemOnName = cart.find((i) => i.name === search);
+    
     if (existingItemOnBarcode) {
-      setCart(cart.map(item => 
-        (item.barcode === search && checkStock(item,item.quantity + 1))
-          ? { ...item, quantity: item.quantity + 1, total: parseFloat(item.price) * (parseInt(item.quantity || 0) + 1) } // Increase Qty
-          : item
-      ));
+      setCart(cart.map(item => {
+        if (item.barcode === search && checkStock(item, item.quantity + 1)) {
+          const updatedTotal = parseFloat(item.price) * (parseInt(item.quantity || 0) + 1);
+          return { 
+            ...item, 
+            quantity: item.quantity + 1, 
+            total: updatedTotal, 
+            finalprice: updatedTotal - item.discount 
+          };
+        }
+        return item;
+      }));
       setSearch('');
-      return
+      return;
     }
+    
     if (existingItemOnName) {
-      setCart(cart.map(item => 
-        (item.name === search && checkStock(item,item.quantity + 1))
-          ? { ...item, quantity: item.quantity + 1, total: parseFloat(item.price) * (parseInt(item.quantity || 0) + 1) } // Increase Qty
-          : item
-      ));
+      setCart(cart.map(item => {
+        if (item.name === search && checkStock(item, item.quantity + 1)) {
+          const updatedTotal = parseFloat(item.price) * (parseInt(item.quantity || 0) + 1);
+          return { 
+            ...item, 
+            quantity: item.quantity + 1, 
+            total: updatedTotal, 
+            finalprice: updatedTotal - item.discount 
+          };
+        }
+        return item;
+      }));
       setSearch('');
-      return
+      return;
     }
 
     // Fetch item from Python backend
@@ -184,8 +205,8 @@ export default function Checkout({cart, setCart, shopDetails}) {
     
     if (res.ok) {
       const item = await res.json();
-      if (checkStock(item,1)) {
-        setCart([...cart, {...item,quantity: 1, total: item.price, discount: 0, finalprice: item.price}]);
+      if (checkStock(item, 1)) {
+        setCart([...cart, {...item, quantity: 1, total: item.price, discount: 0, finalprice: item.price}]);
         setSearch(''); // Clear search box
       } else {
         toast.error(`${item.name} is out of stock!`);
@@ -198,11 +219,12 @@ export default function Checkout({cart, setCart, shopDetails}) {
   return (
     
     <div className="p-8 flex flex-col h-full">
-      <ConfirmModal 
+      <ConfirmPaymentModal 
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         total={totalAmount}
         itemsCount={totalItems}
+        onConfirm={processTransaction}
       />
       
       {/* Top Section: Search */}
@@ -295,15 +317,27 @@ export default function Checkout({cart, setCart, shopDetails}) {
 
         {/* Bill Section */}
         <div className="w-72 bg-black border-4 border-black rounded-md overflow-auto">
-          <div id="receipt" className='h-[calc(100%-2.5rem)] flex flex-col'>
+          <div id="receipt" className='h-[calc(100%-2.5rem)] flex flex-col flex-1'>
             <Receipt 
                 items={totalItems}
                 cart={cart}
                 total={totalAmount}
                 shopDetails={shopDetails}
                 orderId={currentInvoiceId}
-                date={today()}
+                date={formattedDate(today())}
             />
+            {/* <div className="flex flex-1">
+            <PDFViewer>
+              <ReceiptPDF 
+          items={totalItems}
+          cart={cart}
+          total={totalAmount}
+          shopDetails={shopDetails}
+          orderId={currentInvoiceId}
+          date={today()}
+          />
+            </PDFViewer>
+            </div> */}
           </div>
           <div>
             <label className="flex gap-2 items-center cursor-pointer text-black py-2 px-4 bg-gray-200">

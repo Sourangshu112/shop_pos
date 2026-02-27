@@ -29,6 +29,7 @@ backend/__pycache__
 *.sw?
 *.exe
 *.txt
+*.csv
 
 backend/__pycache__/
 *.py[cod]

@@ -17,3 +17,7 @@ export const getLastDay = () => {
 export const today = () => {
     return format(new Date(),"yyyy-MM-dd")
 }
+
+export const formattedDate = (date) => {
+  return format(new Date(date), 'dd/MM/yyyy');
+}

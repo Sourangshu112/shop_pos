@@ -1,4 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
+import { Trash2 } from 'lucide-react';
+import ConfirmDeleteModal from '../components/ConfirmDeleteModal';
 
 export default function Inventory() {
   const [items, setItems] = useState([]);
@@ -7,6 +9,9 @@ export default function Inventory() {
   const [searchTerm, setSearchTerm] = useState("");
   const [sortConfig, setSortConfig] = useState({ key: 'name', direction: 'ascending' });
   const [lowStock, setLowStock] = useState([]);
+  const [message, setMessage] = useState('');
+  const [id,setId] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
 
   const refreshData = async () => {
@@ -52,8 +57,7 @@ export default function Inventory() {
     setSortConfig({ key, direction });
   };
 
-  // 3. The "Smart" List: Filtered AND Sorted
-  // useMemo ensures we only recalculate this when items, search, or sort changes
+
   const processedItems = useMemo(() => {
     let filtered = [...items];
 
@@ -85,9 +89,48 @@ export default function Inventory() {
     return sortConfig.direction === 'ascending' ? "↑" : "↓";
   };
 
+  const openModal = (barcode,name,stock,price) => {
+    setMessage(`Are You sure want to delete ${name} with stock of ${stock} worth Rs ${(stock*price).toFixed(2)}`);
+    setId(barcode);
+    setIsModalOpen(true);
+  }
+
+  const onDelete = async () => {
+    try {
+      // Send the HTTP DELETE request to Flask
+      const response = await fetch(`http://localhost:5000/api/inventory-delete/${id}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        toast.success("Success");
+      } else {
+        toast.error("Failed")
+        console.error("Failed to delete the item.");
+      }
+    } catch (error) {
+      console.error("Network error:", error);
+    } finally {
+      setIsModalOpen(false);
+      setId(null);
+      refreshData();
+    }
+  }
+
+  const onCancle = () => {
+    setId(null);
+    setIsModalOpen(false)
+  }
+
   return (
+
     <div className="p-8 h-full flex flex-col">
-      
+      <ConfirmDeleteModal 
+        isOpen={isModalOpen} 
+        message={message} 
+        onConfirm={onDelete} 
+        onCancel={onCancle}
+      />
       {/* Header Section with Search */}
       <div className="flex justify-between items-center mb-6 gap-4">
         <h2 className="text-2xl font-bold text-gray-800">Current Inventory</h2>
@@ -139,7 +182,7 @@ export default function Inventory() {
               >
                 Stock <span className="ml-1 text-gray-400">{getSortIcon('stock')}</span>
               </th>
-
+              <th></th>
             </tr>
           </thead>
           
@@ -154,6 +197,13 @@ export default function Inventory() {
                     <span className={`${item.stock < 10 ? "bg-red-100 text-red-700 border border-red-200" : "bg-green-100 text-green-700 border border-green-200"} py-1 px-3 rounded-full text-xs font-bold`}>
                       {item.stock}
                     </span>
+                  </td>
+                  <td>
+                    <td className="text-sm text-right font-bold text-gray-900"> 
+                      <button onClick={() => openModal(item.barcode,item.name,item.stock,item.price)} className="text-red-500 text-sm hover:text-red-700 font-bold px-3 py-1 rounded-full hover:bg-red-100 transition">
+                        <Trash2 size={24} color='red' />
+                      </button>
+                    </td>
                   </td>
                 </tr>
               ))

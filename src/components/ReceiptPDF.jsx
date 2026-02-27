@@ -27,9 +27,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'flex-end', // Aligns QR with the bottom of the text
     paddingBottom: 5,
-    borderBottomWidth: 1,
-    borderBottomColor: '#000',
-    borderBottomStyle: 'dashed',
   },
   infoSection: {
     flexDirection: 'column',
@@ -45,9 +42,6 @@ const styles = StyleSheet.create({
   },
   row: {
     flexDirection: 'row',
-    borderBottomWidth: 0.5,
-    borderBottomColor: '#000',
-    borderBottomStyle: 'dashed',
     paddingVertical: 4,
   },
   colItem: { width: '45%' },
@@ -56,14 +50,17 @@ const styles = StyleSheet.create({
   colTotal: { width: '25%', textAlign: 'center' },
   totalSection: {
     marginTop: 10,
-    borderTopWidth: 1,
-    borderTopColor: '#000',
-    borderTopStyle: 'dashed',
     paddingTop: 5,
     flexDirection: 'row',
     justifyContent: 'space-between',
   },
   bold: { fontWeight: 'bold' },
+  box: {
+    flexDirection: 'column',
+    borderBottomWidth: 1,
+    borderBottomColor: '#000',
+    borderBottomStyle: 'dashed',
+  }
 });
 
 // The Document Component
@@ -111,7 +108,7 @@ export const ReceiptPDF = ({ items, cart, total, shopDetails, orderId, date }) =
 
       {/* 4. ITEMS LOOP */}
       {cart.map((item, i) => (
-        <View key={i} style={styles.row}>
+        <View key={i} style={styles.box}>
           <View style={styles.row}>
             <Text style={styles.colItem}>{item.name}</Text>
             <Text style={styles.colQty}>{item.quantity}</Text>

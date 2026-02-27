@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { format, eachDayOfInterval, isSameDay, parseISO } from 'date-fns';
-import { getFirstDay,getLastDay } from '../utils/DateTime';
+import { getFirstDay,getLastDay,formattedDate } from '../utils/DateTime';
 import toast from 'react-hot-toast';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
@@ -9,6 +9,8 @@ import { saveAs } from 'file-saver';
 export default function Analytics() {
   const [salesData, setSalesData] = useState([]);
   const [trendData, setTrendData] = useState([]);
+  const [salesItemWise, setSalesItemWise] = useState([]);
+  const [salesDateWise, setSalesDateWise] = useState([]);
   const [startDate, setStartDate] = useState(getFirstDay());
   const [endDate, setEndDate] = useState(getLastDay());
   
@@ -28,6 +30,20 @@ export default function Analytics() {
           setTrendData(processChartData(data.trend,startDate, endDate));
         }
          else throw new Error("Failed in Loading")
+
+        const res3 = await fetch(`http://127.0.0.1:5000/api/analytics/item-wise-sales?startDate=${startDate}&endDate=${endDate}`);
+        if(res3.ok){
+          const data = await res3.json();
+          setSalesItemWise(data);
+        }
+         else throw new Error("Failed in Loading")
+
+        const res4 = await fetch(`http://127.0.0.1:5000/api/analytics/date-wise-sales?startDate=${startDate}&endDate=${endDate}`);
+        if(res4.ok){
+          const data = await res4.json();
+          setSalesDateWise(data);
+        }
+         else throw new Error("Failed in Loading")
       }
       catch (error) {
         toast.error("Failed try again")
@@ -41,11 +57,15 @@ export default function Analytics() {
 
   const exportToExcel = () => {
     const worksheet1 = XLSX.utils.json_to_sheet(salesData);
-    const worksheet2 = XLSX.utils.json_to_sheet(trendData)
+    const worksheet2 = XLSX.utils.json_to_sheet(trendData);
+    const worksheet3 = XLSX.utils.json_to_sheet(salesItemWise);
+    const worksheet4 = XLSX.utils.json_to_sheet(salesDateWise);
 
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet1, "Sales Record");
+    XLSX.utils.book_append_sheet(workbook, worksheet1, "TOP SOLD ITEMS");
     XLSX.utils.book_append_sheet(workbook, worksheet2, "Sales Per Day Record");
+    XLSX.utils.book_append_sheet(workbook, worksheet3, "Sales Data Item Wise");
+    XLSX.utils.book_append_sheet(workbook, worksheet4, "Sales Data Date Wise");
 
     const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
 
@@ -74,7 +94,10 @@ export default function Analytics() {
   return (
     <div className="p-8 h-full bg-gray-50 overflow-y-auto">
       <div className='flex justify-between items-center mb-6 gap-4'>
-        <h2 className="text-3xl font-bold text-gray-800 mb-8">Dashboard</h2>
+        <div>
+        <h2  className="text-3xl font-bold text-gray-800">Dashboard</h2>
+        <h3  className="text-md font-bold text-gray-500 mb-8">DATA between {formattedDate(startDate)} and {formattedDate(endDate)}</h3>
+        </div>
         <div className='flex px-2 gap-4'>
           <div className='flex flex-col px-2 gap-1'>
             <label className="text-sm font-semibold text-gray-600 ml-1">Starting Date</label>
@@ -122,12 +145,11 @@ export default function Analytics() {
               Export to Excel
             </button>
         </div>
-      </div>
-      {/* TOP ROW: Trend Chart & Low Stock */}
-      {/* BOTTOM ROW: The original Bar Chart */}
-      <div className="mb-8">
-      <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 h-80">
-        <h3 className="text-lg font-semibold text-gray-600 mb-4">Top Selling Items</h3>
+      </div >
+      <div className='grid grid-row-2 gap-4'>
+      <div className="grid grid-cols-2 gap-2">
+      <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+        <h3 className="text-lg font-semibold text-gray-600">Top Selling Items</h3>
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={salesData.slice(0, 10)}>
              {/* ... your existing BarChart code ... */}
@@ -139,11 +161,10 @@ export default function Analytics() {
           </BarChart>
         </ResponsiveContainer>
       </div>
-      </div>
 
-      {/* 1. REVENUE TREND (Line Chart) takes up 2/3rds */}
+      {/* 1. REVENUE TREND (Line Chart) */}
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-          <h3 className="text-lg font-semibold text-gray-600 mb-4">Monthly Revenue Trend</h3>
+          <h3 className="text-lg font-semibold text-gray-600">Revenue Trend</h3>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={trendData}>
@@ -162,6 +183,80 @@ export default function Analytics() {
               </LineChart>
             </ResponsiveContainer>
           </div>
+        </div>
+        </div>
+        <div className='grid grid-cols-2 gap-4'>
+          {/* DAY BOOK TABLE */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+            <div className="p-6 border-b border-gray-100">
+              <h3 className="text-lg font-semibold text-gray-800">Sales Item wise </h3>
+            </div>
+            <table className="w-full text-left border-collapse p-10">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="p-4 font-semibold text-gray-600 border-b">Item Name</th>
+                  <th className="p-4 font-semibold text-gray-600 border-b text-center">Total Qty</th>
+                  <th className="p-4 font-semibold text-gray-600 border-b text-right">Discounts</th>
+                  <th className="p-4 font-semibold text-gray-600 border-b text-right">Net Revenue</th>
+                </tr>
+              </thead>
+              <tbody>
+                {salesItemWise.map((item, idx) => (
+                  <tr key={idx} className="hover:bg-gray-50">
+                    <td className="p-4 border-b font-medium text-gray-800">{item.name}</td>
+                    <td className="p-4 border-b text-center font-bold">{item.total_qty}</td>
+                    <td className="p-4 border-b text-right text-red-500">
+                      {item.total_discount > 0 ? `-₹${item.total_discount.toFixed(2)}` : '-0'}
+                    </td>
+                    <td className="p-4 border-b text-right font-bold text-gray-900">₹{item.total_revenue.toFixed(2)}</td>
+                  </tr>
+                ))}
+                {/* GRAND TOTAL ROW */}
+                <tr className="bg-blue-50">
+                  <td className="p-4 font-bold text-gray-800 text-left">TOTALS:</td>
+                  <td className="p-4 font-bold text-center text-gray-900">
+                    {salesItemWise.reduce((sum, item) => sum + item.total_qty, 0)}
+                  </td>
+                  <td className="p-4 font-bold text-right text-red-600">
+                    -{salesItemWise.reduce((sum, item) => sum + item.total_discount, 0)}
+                  </td>
+                  <td className="p-4 font-bold text-right text-blue-700 text-xl">
+                    {salesItemWise.reduce((sum, item) => sum + item.total_revenue, 0)}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+            <div className="p-6 border-b border-gray-100">
+              <h3 className="text-lg font-semibold text-gray-800">Sales Date wise </h3>
+            </div>
+            <table className="w-full text-left border-collapse">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="p-4 font-semibold text-gray-600 border-b">Date</th>                  
+                  <th className="p-4 font-semibold text-gray-600 border-b">Item Name</th>
+                  <th className="p-4 font-semibold text-gray-600 border-b text-center">Total Qty</th>
+                  <th className="p-4 font-semibold text-gray-600 border-b text-right">Discounts</th>
+                  <th className="p-4 font-semibold text-gray-600 border-b text-right">Net Revenue</th>
+                </tr>
+              </thead>
+              <tbody>
+                {salesDateWise.map((item, idx) => (
+                  <tr key={idx} className="hover:bg-gray-50">
+                    <td className="p-4 border-b font-medium text-gray-800">{formattedDate(item.date)}</td>
+                    <td className="p-4 border-b font-medium text-gray-800">{item.name}</td>
+                    <td className="p-4 border-b text-center font-bold">{item.total_qty}</td>
+                    <td className="p-4 border-b text-right text-red-500">
+                      {item.total_discount > 0 ? `-₹${item.total_discount.toFixed(2)}` : '-0'}
+                    </td>
+                    <td className="p-4 border-b text-right font-bold text-gray-900">₹{item.total_revenue.toFixed(2)}</td>
+                  </tr>
+                ))}
+                </tbody>
+              </table>
+            </div>
+        </div>
         </div>
     </div>
   );

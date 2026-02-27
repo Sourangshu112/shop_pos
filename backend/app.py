@@ -9,6 +9,7 @@ from add_item import add_item
 from analytics import analytics
 from history import history
 from purchase import purchase
+from add_data import add_data
 
 app = Flask(__name__)
 CORS(app)
@@ -34,6 +35,8 @@ app.register_blueprint(history)
 
 # --- 7. PURCHASE ---
 app.register_blueprint(purchase)
+
+app.register_blueprint(add_data)
 
 
 if __name__ == "__main__":

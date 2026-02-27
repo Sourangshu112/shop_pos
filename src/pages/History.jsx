@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import InvoiceHistoryModal from '../components/InvoiceHistoryModal';
 import { Search } from 'lucide-react';
-import { today } from '../utils/DateTime';
+import { today,formattedDate } from '../utils/DateTime';
 
 export default function History() {
   const [transactions, setTransactions] = useState([]);
@@ -62,7 +62,6 @@ export default function History() {
         throw new Error(`Server error: ${res.status}`);
       }
       const data = await res.json();
-      console.log(data);
       setTransactions(data);
       toast.success("Success in finding");
       setFilterDate("")
@@ -149,7 +148,7 @@ export default function History() {
         <table className="min-w-full leading-normal">
           <thead>
             <tr className="bg-gray-100 text-gray-600 uppercase text-xs font-bold sticky top-0">
-              <th className="px-5 py-3 text-left">Date / Time</th>
+              <th className="px-5 py-3 text-left">Date</th>
               <th className="px-5 py-3 text-left">Invoice ID</th>
               <th className="px-5 py-3 text-center">Items</th>
               <th className="px-5 py-3 text-right">Total Amount</th>
@@ -162,7 +161,7 @@ export default function History() {
             ) : (
               transactions.map((txn) => (
                 <tr key={txn.invoice_id} className="border-b border-gray-200 hover:bg-blue-50">
-                  <td className="px-5 py-4 text-sm text-gray-700">{txn.date}</td>
+                  <td className="px-5 py-4 text-sm text-gray-700">{formattedDate(txn.date)}</td>
                   <td className="px-5 py-4 text-sm font-mono text-gray-600">{txn.invoice_id}</td>
                   <td className="px-5 py-4 text-sm text-center">{txn.items_count}</td>
                   <td className="px-5 py-4 text-sm text-right font-bold text-gray-800">

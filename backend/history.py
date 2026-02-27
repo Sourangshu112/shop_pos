@@ -12,7 +12,7 @@ def get_history():
     conn = sqlite3.connect(DB_NAME)
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM transactions ORDER BY date DESC")
+    cursor.execute("SELECT * FROM transactions ORDER BY date DESC LIMIT 100")
     rows = cursor.fetchall()
     conn.close()
     return jsonify([dict(row) for row in rows])

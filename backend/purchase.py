@@ -12,7 +12,7 @@ def get_purchase_history():
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
     # Fetch all records from the purchases table, newest first
-    cursor.execute("SELECT * FROM purchases ORDER BY date DESC, id DESC")
+    cursor.execute("SELECT * FROM purchases ORDER BY date DESC, id DESC LIMIT 100")
     rows = cursor.fetchall()
     conn.close()
     return jsonify([dict(row) for row in rows])

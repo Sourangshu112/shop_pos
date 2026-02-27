@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, } from 'react';
 import { PackageOpen, Calendar, Truck } from 'lucide-react';
+import { formattedDate } from '../utils/DateTime';
 
 export default function PurchaseHistory() {
   const [purchases, setPurchases] = useState([]);
@@ -55,7 +56,7 @@ export default function PurchaseHistory() {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                       <div className="flex items-center gap-2">
                         <Calendar size={14} className="text-gray-400" />
-                        {record.date}
+                        {formattedDate(record.date)}
                       </div>
                     </td>
                     <td className="px-6 py-4">
