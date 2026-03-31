@@ -16,7 +16,7 @@ function App() {
   const [itemsList, setItemsList] = useState([]);
   const [shopDetails, setShopDetails] = useState(() => {
     const saved = localStorage.getItem("pos_shop");
-    return saved ? JSON.parse(saved) : { name: "", address: "", gst: "", phone: "" };
+    return saved ? JSON.parse(saved) : { name: "", address: "", gst: "", phone: "", isPrintEnabled: true};
   });
 
   useEffect(() => {
@@ -32,7 +32,7 @@ function App() {
       {/* Main Content Area */}
       <main className="flex-1 overflow-hidden">
         {activeTab === 'shopDetails' && <ShopDetails shopDetails={shopDetails} setShopDetails={setShopDetails} />}
-        {activeTab === 'checkout' && <Checkout cart={cart} setCart={setCart} shopDetails={shopDetails} />}
+        {activeTab === 'checkout' && <Checkout cart={cart} setCart={setCart} shopDetails={shopDetails} setShopDetails={setShopDetails}/>}
         {activeTab === 'add_item' && <AddItem itemsList={itemsList} setItemsList={setItemsList}  />}
         {activeTab === 'inventory' && <Inventory />}
         {activeTab === 'analytics' && <Analytics />}

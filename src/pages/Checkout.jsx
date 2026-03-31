@@ -7,40 +7,38 @@ import { ReceiptPDF  } from '../components/ReceiptPDF';
 import { Trash2 } from 'lucide-react';
 import { generateInvoiceId, today, formattedDate } from '../utils/DateTime';
 
-export default function Checkout({cart, setCart, shopDetails}) {
+export default function Checkout({cart, setCart, shopDetails, setShopDetails}) {
   const [search, setSearch] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentInvoiceId, setCurrentInvoiceId] = useState(generateInvoiceId());
-  const [isPrintEnabled, setIsPrintEnabled] = useState(false);
+  
 
   const totalAmount = cart.reduce((sum, item) => sum + item.finalprice, 0);
   const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
 
-  const handlePrintToggleChange = async () => {
-    const newValue = !isPrintEnabled;
-    setIsPrintEnabled(newValue);
+  const handlePrintToggleChange = () => {
+    const newValue = !shopDetails.isPrintEnabled;
+    setShopDetails({...shopDetails, isPrintEnabled: newValue})
+    updatePrintSettings(newValue);
+  };
 
-    try {
-      // Call the Flask backend
-      const response = await fetch(`http://127.0.0.1:5000/api/toggle-print?value=${newValue}`);
-      
+  const updatePrintSettings = async (value) => {
+      try {
+      const response = await fetch(`http://127.0.0.1:5000/api/toggle-print?value=${value}`);
+      console.log("Confirmation")
       if (!response.ok) {
         throw new Error('Failed to update print status on the server.');
       }
       
-      // const data = await response.json();
-      // console.log("Server response:", data);
-
     } catch (error) {
       console.error("Error toggling print:", error);
-      setIsPrintEnabled(!newValue);
-      // alert("Failed to update settings. Please try again.");
+      setShopDetails({...shopDetails, isPrintEnabled: !value})
       toast.error("Failed to update");
     }
-  };
+  }
   
   useEffect(() => {
-    handlePrintToggleChange()
+    updatePrintSettings(shopDetails.isPrintEnabled)
   },[]);
 
 
@@ -261,7 +259,7 @@ export default function Checkout({cart, setCart, shopDetails}) {
                       <th className="w-[20%] px-4 py-3 text-center text-xs font-bold text-gray-600 uppercase ">Quantity</th>
                       <th className="w-[10%] px-4 py-3 text-right text-xs font-bold text-gray-600 uppercase">Rate</th>
                       <th className="w-[10%] px-4 py-3 text-right text-xs font-bold text-gray-600 uppercase">Price</th>
-                      <th className="w-[10%] px-4 py-3 text-right text-xs font-bold text-gray-600 uppercase">₹ Discount</th>
+                      <th className="w-[10%] px-4 py-3 text-right text-xs font-bold text-gray-600 uppercase">Discount</th>
                       <th className="w-[10%] px-4 py-3 text-right text-xs font-bold text-gray-600 uppercase">Final price</th>
                       <th className="w-[5%] px-4 py-3 text-right text-xs font-bold text-gray-600 uppercasr"></th>
 
@@ -347,7 +345,7 @@ export default function Checkout({cart, setCart, shopDetails}) {
               type="checkbox" 
               value="Print" 
               className="sr-only peer"
-              checked={isPrintEnabled}
+              checked={shopDetails.isPrintEnabled}
               onChange={handlePrintToggleChange}            />
             <span>NO</span>
             {/* Visual Toggle Switch */}

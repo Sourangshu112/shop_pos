@@ -8,8 +8,8 @@
   "main": "electron/main.cjs",
   "scripts": {
     "vite:dev": "vite",
-    "electron:dev": "cross-env ELECTRON_START_URL=http://localhost:3000 electron .",
-    "dev": "concurrently -k \"npm run vite:dev\" \"wait-on tcp:3000 && npm run electron:dev\"",
+    "electron:dev": "cross-env ELECTRON_START_URL=http://localhost:4231 electron .",
+    "dev": "concurrently -k \"npm run vite:dev\" \"wait-on tcp:4231 && npm run electron:dev\"",
     "vite:build": "vite build",
     "pack:app": "electron-builder --dir",
     "build:app": "electron-builder",

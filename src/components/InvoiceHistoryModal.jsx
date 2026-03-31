@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from 'react';
+import { formattedDate } from '../utils/DateTime';
 
 const InvoiceHistoryModal = ({ billData, onClose, isOpen }) => {
   const modalRef = useRef(null);
@@ -39,11 +40,11 @@ const InvoiceHistoryModal = ({ billData, onClose, isOpen }) => {
           <div className="grid grid-cols-2 gap-4 mt-2">
             <div>
               <p className="text-[10px] uppercase tracking-wider font-bold text-slate-400">Date Processed</p>
-              <p className="text-sm font-medium text-slate-700">{billData.date}</p>
+              <p className="text-sm font-medium text-slate-700">{formattedDate(billData.transaction_data.date)}</p>
             </div>
             <div className="text-right">
               <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                ID: {billData.invoice_id}
+                ID: {billData.transaction_data.invoice_id}
               </span>
             </div>
           </div>
@@ -56,17 +57,19 @@ const InvoiceHistoryModal = ({ billData, onClose, isOpen }) => {
               <tr>
                 <th className="px-6 py-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Description</th>
                 <th className="px-6 py-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider text-center">Qty</th>
-                <th className="px-6 py-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider text-right">Total</th>
+                <th className="px-6 py-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider text-right">Initial Price</th>
+                <th className="px-6 py-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider text-right">Discount</th>
+                <th className="px-6 py-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider text-right">Final Price</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
-              {billData.data.map((item, index) => (
+              {billData.items_data.map((item, index) => (
                 <tr key={index} className="hover:bg-slate-50 transition-colors">
                   <td className="px-6 py-4 text-sm font-medium text-slate-700">{item.name}</td>
                   <td className="px-6 py-4 text-sm text-slate-500 text-center">{item.quantity}</td>
-                  <td className="px-6 py-4 text-sm font-bold text-slate-900 text-right">
-                    ₹{item.total.toLocaleString()}
-                  </td>
+                  <td className="px-6 py-4 text-sm font-bold text-slate-900 text-right">₹{item.total.toLocaleString()}</td>
+                  <td className="px-6 py-4 text-sm font-bold text-slate-900 text-right">₹{item.discount.toLocaleString()}</td>
+                  <td className="px-6 py-4 text-sm font-bold text-slate-900 text-right">₹{item.final_price.toLocaleString()}</td>
                 </tr>
               ))}
             </tbody>
@@ -76,11 +79,14 @@ const InvoiceHistoryModal = ({ billData, onClose, isOpen }) => {
         {/* Bottom Summary */}
         <div className="p-6 border-t border-slate-100 bg-white">
           <div className="flex justify-between items-center">
+          <div className="flex justify-between items-center gap-2">
+            <span className="text-slate-500 font-medium">Total Items:</span>
+            <span className="text-2xl font-black text-blue-600">{billData.transaction_data.total_items.toLocaleString()}</span>
+          </div><div className="flex justify-between items-center gap-2">
             <span className="text-slate-500 font-medium">Grand Total</span>
-            <span className="text-2xl font-black text-blue-600">
-              ₹ {billData.data.reduce((acc, curr) => acc + curr.total, 0).toLocaleString()}
-            </span>
+            <span className="text-2xl font-black text-blue-600">₹ {billData.transaction_data.total_amount.toLocaleString()}</span>
           </div>
+          </div> 
           <button 
             onClick={onClose}
             className="w-full mt-6 bg-slate-800 text-white py-2 rounded-lg font-medium hover:bg-slate-900 transition-all active:scale-[0.98]"

@@ -11,20 +11,36 @@ function startPythonBackend() {
     const pythonExePath = path.join(process.resourcesPath, 'backend-dist', 'app.exe');
     pythonProcess = spawn(pythonExePath);
   } else {
+    // 1. Verify the exact path being targeted
     const pythonScriptPath = path.join(__dirname, '../backend/app.py');
-    pythonProcess = spawn('python', [pythonScriptPath]);
+    console.log('Attempting to start Python script at:', pythonScriptPath);
+
+    const backendDirectory = path.join(__dirname, '../backend');
+    pythonProcess = spawn('python', [pythonScriptPath], { cwd: backendDirectory });
   }
 
-  // --- NEW: AUTO-RESTART LOGIC ---
+  // --- NEW: CATCH OUTPUT AND ERRORS ---
+  pythonProcess.stdout.on('data', (data) => {
+    console.log(`[Python Output]: ${data.toString()}`);
+  });
+
+  pythonProcess.stderr.on('data', (data) => {
+    console.error(`[Python Error]: ${data.toString()}`);
+  });
+
+  pythonProcess.on('error', (err) => {
+    console.error('Failed to spawn Python process. Is Python in your PATH?', err);
+  });
+
+  // --- YOUR EXISTING AUTO-RESTART LOGIC ---
   pythonProcess.on('close', (code) => {
     console.log(`Python backend exited with code ${code}`);
     
-    // Only restart if the user didn't intentionally close the app
     if (!isAppQuitting) {
       console.log('Restarting Python backend in 2 seconds...');
       setTimeout(() => {
         startPythonBackend();
-      }, 2000); // 2-second delay prevents infinite CPU crash-loops
+      }, 2000);
     }
   });
 }

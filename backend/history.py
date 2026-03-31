@@ -12,7 +12,7 @@ def get_history():
     conn = sqlite3.connect(DB_NAME)
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM transactions ORDER BY date DESC LIMIT 100")
+    cursor.execute("SELECT * FROM transactions ORDER BY date DESC, invoice_id DESC LIMIT 100")
     rows = cursor.fetchall()
     conn.close()
     return jsonify([dict(row) for row in rows])
@@ -44,7 +44,7 @@ def date_history():
     conn = sqlite3.connect(DB_NAME)
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM transactions WHERE date = ? ORDER BY date DESC",(date,))
+    cursor.execute("SELECT * FROM transactions WHERE date = ? ORDER BY date DESC, invoice_id DESC",(date,))
     rows = cursor.fetchall()
     conn.close()
     return jsonify([dict(row) for row in rows])
@@ -68,10 +68,13 @@ def get_item(item_id):
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM sales WHERE invoice_id = ?",(item_id,))
     data_raw = cursor.fetchall()
-    data = [{"name" : i[3], "quantity": i[4], "total": i[5]} for i in data_raw]
-    # Flask automatically passes 'item_id' as an argument
+    cursor.execute("SELECT * FROM transactions WHERE invoice_id = ?",(item_id,))
+    row = cursor.fetchone()
+    conn.close()
+    data_1 = [{"name" : i[3], "quantity": i[4], "total": i[5], "discount": i[6], "final_price": i[7]} for i in data_raw]
+    data_2 = {"invoice_id": row[0], "date": row[1], "total_amount": row[2], "total_items": row[3]}
+
     return jsonify({
-        "invoice_id": item_id,
-        "date" : data_raw[0][-1],
-        "data" : data,
+        "items_data" : data_1,
+        "transaction_data" : data_2
     })
