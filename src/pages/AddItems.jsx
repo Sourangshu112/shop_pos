@@ -10,9 +10,11 @@ export default function AddItem({itemsList, setItemsList}) {
   const [isLocked, setIsLocked] = useState(false);
 
   // NEW: Refs for auto-focusing
-  const nameInputRef = useRef(null);
-  const stockInputRef = useRef(null);
   const barcodeInputRef = useRef(null);
+  const nameInputRef = useRef(null);
+  const priceInputRef = useRef(null);
+  const stockInputRef = useRef(null);
+  const addButtonRef = useRef(null);
 
   const fetchData = async () => {
     try {
@@ -142,10 +144,9 @@ export default function AddItem({itemsList, setItemsList}) {
 
     setItemsList([...itemsList, newItem]);
     
-    // RESET EVERYTHING FOR NEXT ITEM
     setForm({ barcode: '', name: '', price: '', stock: '', lock: false });
-    setIsLocked(false); // <--- Unlock for next scan
-    barcodeInputRef.current.focus(); // Go back to start
+    setIsLocked(false); 
+    barcodeInputRef.current.focus(); 
   };
 
   const removeItem = id => setItemsList(itemsList.filter(item => item.tempId !== id));
@@ -159,7 +160,6 @@ export default function AddItem({itemsList, setItemsList}) {
     const loadingToast = toast.loading("Saving to Inventory...");
 
     try {
-      // We will send the WHOLE list to Python
       const res = await fetch('http://127.0.0.1:5000/api/add-items-bulk', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -171,7 +171,7 @@ export default function AddItem({itemsList, setItemsList}) {
       if (res.ok) {
         toast.dismiss(loadingToast);
         toast.success(`Successfully added ${itemsList.length} items!`);
-        setItemsList([]); // Clear the table
+        setItemsList([]);
       } else {
         toast.dismiss(loadingToast);
         toast.error(`Error: ${data.error}`);
@@ -179,6 +179,8 @@ export default function AddItem({itemsList, setItemsList}) {
     } catch (err) {
       toast.dismiss(loadingToast);
       toast.error("Server connection failed");
+    } finally {
+      barcodeInputRef.current.focus(); 
     }
   };
 
@@ -206,47 +208,69 @@ export default function AddItem({itemsList, setItemsList}) {
         <div className="col-span-4">
           <label className="text-xs font-bold text-gray-500 uppercase">Item Name</label>
           <input 
-            ref={nameInputRef} // Attach Ref
+            ref={nameInputRef} 
             name="name" 
             placeholder="Product Name" 
             value={form.name}
-            onFocus={handleBarcodeKeyDown}
             onChange={handleChange}
-            disabled={isLocked} // <--- DISABLED IF FOUND
+            onKeyDown={(e) => {
+              // If Enter is pressed, move to Price
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                priceInputRef.current?.focus();
+              }
+            }}
+            disabled={isLocked} 
             className={`w-full mt-1 p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${isLocked ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-gray-50'}`} 
           />
         </div>
         
+        {/* --- PRICE INPUT --- */}
         <div className="col-span-2">
           <label className="text-xs font-bold text-gray-500 uppercase">Price</label>
           <input 
+            ref={priceInputRef} // <-- Attach Ref
             name="price" 
             type="number" 
             placeholder="0.00" 
             value={form.price} 
             onChange={handleChange} 
-            disabled={isLocked} // <--- DISABLED IF FOUND
+            onKeyDown={(e) => {
+              // If Enter is pressed, move to Stock
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                stockInputRef.current?.focus();
+              }
+            }}
+            disabled={isLocked} 
             className={`w-full mt-1 p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${isLocked ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-gray-50'}`}
           />
         </div>
         
+        {/* --- STOCK INPUT --- */}
         <div className="col-span-2">
           <label className="text-xs font-bold text-gray-500 uppercase">Stock</label>
           <input 
-            ref={stockInputRef} // Attach Ref
+            ref={stockInputRef} 
             name="stock" 
             type="number" 
             placeholder="0" 
             value={form.stock} 
             onChange={handleChange} 
-            onKeyDown={(e) => e.key === 'Enter' && addToTable()} 
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                addButtonRef.current?.focus();
+              }
+            }} 
             className="w-full mt-1 p-3 border rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
 
         <button 
+          ref={addButtonRef} // <-- Attach Ref
           onClick={addToTable}
-          className="col-span-1 mt-6 h-12.5 bg-blue-500 text-white font-bold rounded-lg hover:bg-blue-800 transition flex justify-center items-center text-xl"
+          className="col-span-1 mt-6 h-12.5 bg-blue-500 text-white font-bold rounded-lg hover:bg-blue-800 transition flex justify-center items-center text-xl focus:ring-4 focus:ring-blue-300 outline-none"
         >
           ADD
         </button>

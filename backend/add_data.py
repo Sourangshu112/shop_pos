@@ -1,26 +1,29 @@
 from flask import Blueprint, request, jsonify
-import pandas as pd
 
-df = pd.read_csv('collected_data.csv',encoding='latin1')
-add_data = Blueprint('add_data',__name__)
+# Import the 2D list from the newly created python file
+from data_output import data
+
+add_data = Blueprint('add_data', __name__)
 
 def get_item_by_code(search_code):
-    match = df[df['CODE'].astype(str) == str(search_code)]
-    
-    if match.empty:
-        return None 
-        
-    row = match.iloc[0]
-    name = row['NAME']
-    weight = row['WEIGHT-1']
+    for row in data[1:]:
+        # row[0] is CODE, row[1] is NAME, row[2] is WEIGHT-1
+        if str(row[0]) == str(search_code):
+            name = row[1]
+            weight = row[2]
 
-    if pd.isna(name):
-        return None
+            # If name is None (originally NaN in pandas), return None
+            if name is None:
+                return None
 
-    if pd.isna(weight):
-        return f"{name}"
-    else:
-        return f"{name}-{weight}"
+            # If weight is None, just return the name
+            if weight is None:
+                return f"{name}"
+            else:
+                return f"{name}-{weight}"
+                
+    # If the loop finishes without finding a match, return None
+    return None
     
 @add_data.route('/api/get-item', methods=['GET'])
 def get_item():
@@ -34,4 +37,3 @@ def get_item():
         return jsonify({"success": True, "formatted_name": formatted_name}), 200
     else:
         return jsonify({"success": False, "error": "Data not found"}), 404
-

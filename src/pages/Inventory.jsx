@@ -148,8 +148,8 @@ export default function Inventory() {
           Refresh
         </button>
       </div>
-      <div className='flex flex-row gap-5'>
-      <div className="bg-white shadow rounded-lg overflow-hidden grow overflow-y-auto overflow-x-auto w-3/4">
+      <div className='flex flex-row gap-5 overflow-hidden'>
+      <div className="bg-white shadow rounded-lg overflow-auto w-3/4">
         <table className="min-w-full leading-normal">
           <thead>
             <tr className="bg-gray-100 text-gray-600 uppercase text-sm leading-normal sticky top-0">
@@ -217,9 +217,8 @@ export default function Inventory() {
           </tbody>
         </table>
       </div>
-      {console.log(items)}
       {/* 2. LOW STOCK ALERT (List) takes up 1/3rd */}
-        <div className="p-6 rounded-xl shadow-sm border border-red-200 bg-red-100 w-1/4">
+        <div className="p-6 rounded-xl shadow-sm border border-red-200 overflow-auto bg-red-100 w-1/4">
           <h3 className="text-lg font-bold text-red-700 mb-4 flex items-center">
             ⚠️ Low Stock Alerts
           </h3>
